@@ -1,0 +1,52 @@
+# Compiled output
+/dist
+/build
+*.tsbuildinfo
+
+# Dependencies
+/node_modules
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+/.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Testing
+/coverage
+/.nyc_output
+
+# Temp & Runtime
+.temp
+.tmp
+pids
+*.pid
+*.seed
+*.pid.lock
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Turbo
+.turbo
+
+# Prisma
+/generated/prisma
+*.db
+*.db-journal
