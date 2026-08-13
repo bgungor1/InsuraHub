@@ -1,13 +1,273 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
+}
+
+// -------------------------------------------------
+// 2. ENUMS (Sabit Değerler - Magic String Koruması)
+// -------------------------------------------------
+enum UserRole {
+  SUPERADMIN
+  COMPANY_USER
+  AGENCY_MANAGER
+  BRANCH_MANAGER
+  BROKER
+}
+
+enum PolicyState {
+  DRAFT
+  UNASSIGNED
+  CLAIMED
+  COMPLETED
+  CANCELLED
+}
+
+enum TicketCategory {
+  TECHNICAL
+  POLICY_APPROVAL
+  FINANCE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+}
+
+// -------------------------------------------------
+// 3. ORGANIZATION & IDENTITY
+// -------------------------------------------------
+model Company {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+
+  agencies Agency[]
+  users    User[]
+}
+
+model Agency {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  companyId String   @db.ObjectId
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+
+  branches Branch[]
+  users    User[]
+}
+
+model Branch {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  agencyId  String   @db.ObjectId
+  agency    Agency   @relation(fields: [agencyId], references: [id])
+  createdAt DateTime @default(now())
+
+  users    User[]
+  policies Policy[]
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole
+
+  branchId  String?  @db.ObjectId
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  agencyId  String?  @db.ObjectId
+  agency    Agency?  @relation(fields: [agencyId], references: [id])
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  policiesAsBroker Policy[]
+  assignments      PolicyAssignment[]
+  ticketsOpened    Ticket[]
+  ticketMessages   TicketMessage[]
+  notifications    Notification[]
+}
+
+// -------------------------------------------------
+// 4. CRM & POLICY LIFECYCLE
+// -------------------------------------------------
+model Customer {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstName   String
+  lastName    String
+  identityNo  String   @unique
+  contactInfo Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  policies Policy[]
+}
+
+model Policy {
+  id      String      @id @default(auto()) @map("_id") @db.ObjectId
+  product String
+  state   PolicyState @default(DRAFT)
+
+  customerId String   @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  branchId String @db.ObjectId
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  brokerId String? @db.ObjectId
+  broker   User?   @relation(fields: [brokerId], references: [id])
+
+  // Renewal Relationship (Bağlantılı Yenileme Modeli)
+  previousPolicyId String?  @db.ObjectId
+  previousPolicy   Policy?  @relation("PolicyRenewals", fields: [previousPolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  renewals         Policy[] @relation("PolicyRenewals")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 1:1 İlişkiler
+  assignment PolicyAssignment?
+  snapshot   CommissionSnapshot?
+}
+
+model PolicyAssignment {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  policyId String @unique @db.ObjectId
+  policy   Policy @relation(fields: [policyId], references: [id])
+
+  claimedById String   @db.ObjectId
+  claimedBy   User     @relation(fields: [claimedById], references: [id])
+  assignedAt  DateTime @default(now())
+
+  releasedAt    DateTime?
+  releaseReason String?
+}
+
+// -------------------------------------------------
+// 5. COMMISSION & FINANCE (Payout Motoru)
+// -------------------------------------------------
+model CommissionRule {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+
+  // Temporal Versioning
+  validFrom  DateTime  @default(now())
+  validUntil DateTime?
+
+  // Dağılım Oranları
+  companyShare Float
+  agencyShare  Float
+  branchShare  Float
+  brokerShare  Float
+
+  snapshots CommissionSnapshot[]
+}
+
+model CommissionSnapshot {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  policyId String @unique @db.ObjectId
+  policy   Policy @relation(fields: [policyId], references: [id])
+
+  commissionRuleId String         @db.ObjectId
+  rule             CommissionRule @relation(fields: [commissionRuleId], references: [id])
+
+  totalAmount   Float
+  companyAmount Float
+  agencyAmount  Float
+  branchAmount  Float
+  brokerAmount  Float
+
+  calculatedAt DateTime @default(now())
+
+  // Payout ile bağlantısı (1:1 köprü)
+  payoutItem PayoutItem?
+}
+
+model Payout {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  brokerId    String       @db.ObjectId
+  periodStart DateTime
+  periodEnd   DateTime
+  totalAmount Float
+  status      PayoutStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+
+  items PayoutItem[]
+}
+
+model PayoutItem {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  payoutId String @db.ObjectId
+  payout   Payout @relation(fields: [payoutId], references: [id])
+
+  snapshotId String             @unique @db.ObjectId
+  snapshot   CommissionSnapshot @relation(fields: [snapshotId], references: [id])
+
+  amount Float
+}
+
+// -------------------------------------------------
+// 6. COMMUNICATION & GOVERNANCE (Audit & Ticket)
+// -------------------------------------------------
+model Ticket {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  creatorId String @db.ObjectId
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  category TicketCategory
+  status   TicketStatus   @default(OPEN)
+  subject  String
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  messages TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ticketId  String   @db.ObjectId
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  senderId  String   @db.ObjectId
+  sender    User     @relation(fields: [senderId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  actorId    String @db.ObjectId
+  action     String
+  entityType String
+  entityId   String @db.ObjectId
+
+  before Json?
+  after  Json?
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  user      User      @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
 }
