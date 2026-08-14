@@ -23,6 +23,7 @@
 - **No Magic Numbers/Strings:** NEVER hardcode business rules, statuses, or commission rates into functions. Use Enums or a centralized `constants.ts` file.
 - **Pagination by Default:** Any API endpoint returning a list of data MUST implement pagination (`skip`/`take`). NEVER return unbounded arrays.
 - **Environment Variable Validation (Fail Fast):** All environment variables MUST be validated at application startup. 
+- **Barrel Exports (Clean Imports):** Use `index.ts` barrel files to group decorators, guards, strategies, and DTOs within domain modules to prevent import clutter and keep import statements clean. 
 
 ### 4. FRONTEND RULES (Next.js, Zustand & UI)
 - **Framework & State:** App Router ONLY. Default to React Server Components (SSR). Use `"use client"` ONLY when interactivity (hooks, Zustand state, onClick) is explicitly required.
