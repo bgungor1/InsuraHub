@@ -4,6 +4,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { PoliciesModule } from './policies/policies.module';
+import { FinanceModule } from './finance/finance.module';
+import { TicketsModule } from './tickets/tickets.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
@@ -23,6 +27,10 @@ function validateEnv(config: Record<string, unknown>) {
     }),
     PrismaModule,
     AuthModule,
+    UsersModule,
+    PoliciesModule,
+    FinanceModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
