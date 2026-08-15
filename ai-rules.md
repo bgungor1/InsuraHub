@@ -25,10 +25,18 @@
 - **Environment Variable Validation (Fail Fast):** All environment variables MUST be validated at application startup. 
 - **Barrel Exports (Clean Imports):** Use `index.ts` barrel files to group decorators, guards, strategies, and DTOs within domain modules to prevent import clutter and keep import statements clean. 
 
-### 4. FRONTEND RULES (Next.js, Zustand & UI)
-- **Framework & State:** App Router ONLY. Default to React Server Components (SSR). Use `"use client"` ONLY when interactivity (hooks, Zustand state, onClick) is explicitly required.
-- **State Management & Interaction:** Use **Zustand** for global UI state. Components MUST NOT call APIs directly without a structured layer.
-- **Single Source of Truth:** The UI MUST strictly reflect the backend state. Frontend MUST NOT calculate business logic or commissions. 
+### 4. FRONTEND ARCHITECTURE & STATE MANAGEMENT
+- **Framework & Rendering:** App Router ONLY. Default to React Server Components (SSR). Use `"use client"` ONLY when interactivity (hooks, state, event handlers) is explicitly required.
+- **State Management Separation (Strict Boundary):**
+  - **Server State / API Cache:** Use **TanStack Query (React Query)** via **Axios**. Responsible for data fetching, caching, deduplication, retry, background refetching, and cache invalidation.
+  - **Global Client/UI State:** Use **Zustand** strictly for synchronous UI state (modal visibility, sidebar state, active tabs, transient form steps, filter toggles). NEVER store asynchronous server data directly in Zustand stores.
+- **Data Fetching & API Communication Blueprint:**
+  - **SSR / Initial Load (Server Components):** Use native Next.js `fetch` wrapper (with Request Memoization & Tagging).
+  - **Auth & Page-Level Mutations (Login/Logout, Wizards):** Use **Server Actions** (`"use server"`) for secure `httpOnly` cookie management and `revalidatePath`/`redirect`.
+  - **Interactive Data & Grid Operations (AG-Grid, Modals, Dynamic Filters):** Use **TanStack Query + Axios** via structured query/mutation hooks.
+  - **Structured API Layer & Query Key Factories:** Components MUST NOT call Axios/fetch directly or use raw string query keys. Use centralized Query Key Factories (e.g., `policyKeys.detail(id)`) and custom hooks (e.g., `usePoliciesQuery`).
+  - **Zustand Store Granularity:** Avoid monolithic "God Stores". Separate stores by domain/concern (e.g., `useUiStore`, `useFilterStore`).
+- **Single Source of Truth:** The UI MUST strictly reflect backend state. Frontend MUST NOT calculate business logic or commissions.
 - **Component & UI Rules:** Keep components small and reusable (< 150 lines). Use `ag-grid-react` for massive data tables. Use `@amcharts/amcharts5` for dashboards.
 - **Code Quality:** Use `camelCase` for variables/functions, `PascalCase` for Components/Classes, and `kebab-case` for file/folder names. No `any` types. 
 
@@ -37,7 +45,7 @@
 - **Atomic Claiming:** Policy claiming MUST be an atomic server-side operation. The database MUST verify the policy is still in an "unassigned" state at the exact moment of assignment. 
 
 ### 6. REAL-TIME, NOTIFICATIONS & AUDIT TRAIL
-- **Socket.io vs. State:** Socket.io MUST ONLY be used for transient real-time UI synchronization, NEVER as the source of truth for authorization or financial state. 
+- **Socket.io vs. State:** Socket.io MUST ONLY be used for transient real-time UI synchronization, NEVER as the source of truth for authorization or financial state. Incoming Socket events MUST invalidate TanStack Query caches (`queryClient.invalidateQueries`) rather than mutating UI state ad-hoc.
 - **Persistent Notifications:** Business-critical alerts MUST be stored as persistent notifications in the DB, separate from transient Socket events.
 
 ### 7. BUSINESS DOMAIN & OPERATIONAL RULES (CRITICAL)
