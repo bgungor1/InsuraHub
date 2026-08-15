@@ -34,7 +34,8 @@ apiClient.interceptors.response.use(
       if (status === 401 && typeof window !== 'undefined') {
         const isAuthPage = window.location.pathname.startsWith('/login') || window.location.pathname.startsWith('/auth');
         if (!isAuthPage) {
-          console.warn('[API] Session expired or unauthorized. Redirecting to login...')
+          console.warn('[API] Session expired or unauthorized. Redirecting to login...');
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
           window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         }
       }
