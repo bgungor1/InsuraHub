@@ -9,4 +9,8 @@ export const authService = {
   getMe: async (): Promise<LoginResponse> => {
     return api.get<LoginResponse>('/auth/me');
   },
+
+  logout: async (): Promise<{ message: string }> => {
+    return api.post<{ message: string }>('/auth/logout');
+  },
 };
