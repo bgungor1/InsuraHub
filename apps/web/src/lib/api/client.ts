@@ -1,13 +1,9 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ApiErrorResponse } from './types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-/**
- * Standard Axios instance configured for InsuraHub
- * - withCredentials: true ensures HttpOnly cookies (JWT/Session) are automatically passed
- * - Interceptors handle error normalization and authentication expiration
- */
+
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   withCredentials: true,
@@ -18,11 +14,8 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request Interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    // Note: Authentication is handled securely via HttpOnly cookies by the browser.
-    // No manual Authorization header injection is required here.
     return config;
   },
   (error: AxiosError) => {
@@ -30,7 +23,6 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
@@ -39,25 +31,20 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const { status, data } = error.response;
 
-      // Handle Unauthorized (401)
       if (status === 401 && typeof window !== 'undefined') {
         const isAuthPage = window.location.pathname.startsWith('/login') || window.location.pathname.startsWith('/auth');
         if (!isAuthPage) {
-          console.warn('[API] Session expired or unauthorized. Redirecting to login...');
-          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Full page navigation on 401 is required outside React tree to reset all client memory/state
+          console.warn('[API] Session expired or unauthorized. Redirecting to login...')
           window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         }
       }
 
-      // Format custom error message from Backend GlobalExceptionFilter
       const backendMessage = data?.error;
       const formattedMessage = Array.isArray(backendMessage)
         ? backendMessage.join(', ')
         : typeof backendMessage === 'string'
-        ? backendMessage
-        : error.message || 'Bir hata oluştu.';
-
-      // Attach normalized message for easy access in UI/Toasts
+          ? backendMessage
+          : error.message || 'Bir hata oluştu.';
       error.message = formattedMessage;
     } else if (error.request) {
       error.message = 'Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.';
@@ -67,9 +54,6 @@ apiClient.interceptors.response.use(
   }
 );
 
-/**
- * Type-safe API Request Helpers
- */
 export const api = {
   get: <T>(url: string, config?: AxiosRequestConfig) =>
     apiClient.get<T>(url, config).then((res) => res.data),
