@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { UserRole } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { CurrentUser, Roles } from './decorators';
@@ -12,8 +13,28 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    async login(@Body() loginDto: LoginDto) {
-        return this.authService.login(loginDto);
+    async login(
+        @Body() loginDto: LoginDto,
+        @Res({ passthrough: true }) response: Response,
+    ) {
+        const result = await this.authService.login(loginDto);
+
+        response.cookie('Authentication', result.accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 8 * 60 * 60 * 1000,
+            path: '/',
+        });
+
+        return result;
+    }
+
+    @Post('logout')
+    @HttpCode(HttpStatus.OK)
+    logout(@Res({ passthrough: true }) response: Response) {
+        response.clearCookie('Authentication', { path: '/' });
+        return { message: 'Başarıyla çıkış yapıldı' };
     }
 
     @Get('me')
