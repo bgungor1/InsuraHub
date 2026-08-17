@@ -38,4 +38,25 @@ export const queryKeys = {
     all: ['notifications'] as const,
     unread: () => [...queryKeys.notifications.all, 'unread'] as const,
   },
+  companies: {
+    all: ['companies'] as const,
+    lists: () => [...queryKeys.companies.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.companies.lists(), filters] as const,
+    details: () => [...queryKeys.companies.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.companies.details(), id] as const,
+  },
+  agencies: {
+    all: ['agencies'] as const,
+    lists: () => [...queryKeys.agencies.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.agencies.lists(), filters] as const,
+    details: () => [...queryKeys.agencies.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.agencies.details(), id] as const,
+  },
+  branches: {
+    all: ['branches'] as const,
+    lists: () => [...queryKeys.branches.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.branches.lists(), filters] as const,
+    details: () => [...queryKeys.branches.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.branches.details(), id] as const,
+  },
 } as const;
