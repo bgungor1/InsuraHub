@@ -13,6 +13,15 @@ export interface JwtPayload {
   companyId?: string;
 }
 
+export interface AuthenticatedUser {
+  userId: string;
+  email: string;
+  role: string;
+  branchId?: string;
+  agencyId?: string;
+  companyId?: string;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService) {

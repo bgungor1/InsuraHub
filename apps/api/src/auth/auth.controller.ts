@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import { CurrentUser, Roles } from './decorators';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard, RolesGuard } from './guards';
-import type { JwtPayload } from './strategies';
+import type { AuthenticatedUser } from './strategies';
 
 @Controller('auth')
 export class AuthController {
@@ -39,7 +39,8 @@ export class AuthController {
 
     @Get('me')
     @UseGuards(JwtAuthGuard)
-    getProfile(@CurrentUser() user: JwtPayload) {
+    async getProfile(@CurrentUser('userId') userId: string) {
+        const user = await this.authService.getProfile(userId);
         return {
             message: 'Profil bilgileri başarıyla getirildi',
             user,
@@ -49,7 +50,7 @@ export class AuthController {
     @Get('admin-only')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.COMPANY_USER)
-    adminOnlyTest(@CurrentUser() user: JwtPayload) {
+    adminOnlyTest(@CurrentUser() user: AuthenticatedUser) {
         return {
             message: 'Rol ve güvenlik duvarı başarıyla aşıldı! Bu alana sadece yetkili yöneticiler girebilir.',
             user,

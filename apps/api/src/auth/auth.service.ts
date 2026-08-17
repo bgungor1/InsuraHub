@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -43,5 +43,45 @@ export class AuthService {
                 role: user.role,
             },
         };
+    }
+
+    async getProfile(userId: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                companyId: true,
+                agencyId: true,
+                branchId: true,
+                company: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+                agency: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('Kullanıcı bulunamadı');
+        }
+
+        return user;
     }
 }
