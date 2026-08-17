@@ -6,6 +6,11 @@ export type UserRole =
   | 'BRANCH_MANAGER'
   | 'BROKER';
 
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+}
+
 export interface AuthUser {
   id: string;
   email?: string;
@@ -15,6 +20,9 @@ export interface AuthUser {
   branchId?: string | null;
   agencyId?: string | null;
   companyId?: string | null;
+  company?: OrganizationSummary | null;
+  agency?: OrganizationSummary | null;
+  branch?: OrganizationSummary | null;
 }
 
 export interface LoginRequest {
