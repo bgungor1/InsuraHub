@@ -10,6 +10,7 @@ import { FinanceModule } from './finance/finance.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { CompaniesModule } from './domains/companies/companies.module';
 import { AgenciesModule } from './domains/agencies/agencies.module';
+import { BranchesModule } from './domains/branches/branches.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
@@ -35,6 +36,7 @@ function validateEnv(config: Record<string, unknown>) {
     TicketsModule,
     CompaniesModule,
     AgenciesModule,
+    BranchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
