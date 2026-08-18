@@ -35,8 +35,11 @@ export class UsersService {
     this.enforceCreationScope(dto, currentUser);
     await this.resolveHierarchyIds(dto);
 
-    const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (exists) throw new ConflictException('Bu e-posta adresi zaten kullanımda.');
+    const exists = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (exists)
+      throw new ConflictException('Bu e-posta adresi zaten kullanımda.');
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     return this.prisma.user.create({
@@ -47,12 +50,16 @@ export class UsersService {
 
   async findAll(query: QueryUserDto, currentUser: AuthenticatedUser) {
     const where: Prisma.UserWhereInput = {};
-    if (currentUser.role === UserRole.COMPANY_USER && currentUser.companyId) where.companyId = currentUser.companyId;
-    if (currentUser.role === UserRole.AGENCY_MANAGER && currentUser.agencyId) where.agencyId = currentUser.agencyId;
-    if (currentUser.role === UserRole.BRANCH_MANAGER && currentUser.branchId) where.branchId = currentUser.branchId;
+    if (currentUser.role === UserRole.COMPANY_USER && currentUser.companyId)
+      where.companyId = currentUser.companyId;
+    if (currentUser.role === UserRole.AGENCY_MANAGER && currentUser.agencyId)
+      where.agencyId = currentUser.agencyId;
+    if (currentUser.role === UserRole.BRANCH_MANAGER && currentUser.branchId)
+      where.branchId = currentUser.branchId;
 
     if (query.role) where.role = query.role;
-    if (query.companyId && currentUser.role === UserRole.SUPERADMIN) where.companyId = query.companyId;
+    if (query.companyId && currentUser.role === UserRole.SUPERADMIN)
+      where.companyId = query.companyId;
     if (query.agencyId) where.agencyId = query.agencyId;
     if (query.branchId) where.branchId = query.branchId;
 
@@ -81,7 +88,10 @@ export class UsersService {
   }
 
   async findOne(id: string, currentUser: AuthenticatedUser) {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: userSelectFields });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: userSelectFields,
+    });
     if (!user) throw new NotFoundException('Kullanıcı bulunamadı.');
     this.verifyUserScope(user, currentUser);
     return user;
@@ -91,7 +101,11 @@ export class UsersService {
     await this.findOne(id, currentUser);
     const data: Prisma.UserUpdateInput = { ...dto };
     if (dto.password) data.password = await bcrypt.hash(dto.password, 10);
-    return this.prisma.user.update({ where: { id }, data, select: userSelectFields });
+    return this.prisma.user.update({
+      where: { id },
+      data,
+      select: userSelectFields,
+    });
   }
 
   async remove(id: string, currentUser: AuthenticatedUser) {
@@ -104,7 +118,11 @@ export class UsersService {
       if (dto.role === UserRole.SUPERADMIN) throw new ForbiddenException();
       dto.companyId = u.companyId ?? undefined;
     } else if (u.role === UserRole.AGENCY_MANAGER) {
-      if (dto.role === UserRole.SUPERADMIN || dto.role === UserRole.COMPANY_USER) throw new ForbiddenException();
+      if (
+        dto.role === UserRole.SUPERADMIN ||
+        dto.role === UserRole.COMPANY_USER
+      )
+        throw new ForbiddenException();
       dto.companyId = u.companyId ?? undefined;
       dto.agencyId = u.agencyId ?? undefined;
     } else if (u.role === UserRole.BRANCH_MANAGER) {
@@ -127,10 +145,20 @@ export class UsersService {
     }
   }
 
-  private verifyUserScope(t: { companyId?: string | null; agencyId?: string | null; branchId?: string | null }, u: AuthenticatedUser) {
+  private verifyUserScope(
+    t: {
+      companyId?: string | null;
+      agencyId?: string | null;
+      branchId?: string | null;
+    },
+    u: AuthenticatedUser,
+  ) {
     if (u.role === UserRole.SUPERADMIN) return;
-    if (u.role === UserRole.COMPANY_USER && t.companyId !== u.companyId) throw new ForbiddenException();
-    if (u.role === UserRole.AGENCY_MANAGER && t.agencyId !== u.agencyId) throw new ForbiddenException();
-    if (u.role === UserRole.BRANCH_MANAGER && t.branchId !== u.branchId) throw new ForbiddenException();
+    if (u.role === UserRole.COMPANY_USER && t.companyId !== u.companyId)
+      throw new ForbiddenException();
+    if (u.role === UserRole.AGENCY_MANAGER && t.agencyId !== u.agencyId)
+      throw new ForbiddenException();
+    if (u.role === UserRole.BRANCH_MANAGER && t.branchId !== u.branchId)
+      throw new ForbiddenException();
   }
 }

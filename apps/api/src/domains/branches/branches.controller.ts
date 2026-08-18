@@ -25,25 +25,35 @@ export class BranchesController {
   @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER, UserRole.AGENCY_MANAGER)
   create(
     @Body() createBranchDto: CreateBranchDto,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.branchesService.create(createBranchDto, currentUser);
   }
 
   @Get()
-  @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER, UserRole.AGENCY_MANAGER, UserRole.BRANCH_MANAGER)
+  @Roles(
+    UserRole.SUPERADMIN,
+    UserRole.COMPANY_USER,
+    UserRole.AGENCY_MANAGER,
+    UserRole.BRANCH_MANAGER,
+  )
   findAll(
     @Query() query: QueryBranchDto,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.branchesService.findAll(query, currentUser);
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER, UserRole.AGENCY_MANAGER, UserRole.BRANCH_MANAGER)
+  @Roles(
+    UserRole.SUPERADMIN,
+    UserRole.COMPANY_USER,
+    UserRole.AGENCY_MANAGER,
+    UserRole.BRANCH_MANAGER,
+  )
   findOne(
     @Param('id') id: string,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.branchesService.findOne(id, currentUser);
   }
@@ -53,7 +63,7 @@ export class BranchesController {
   update(
     @Param('id') id: string,
     @Body() updateBranchDto: UpdateBranchDto,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.branchesService.update(id, updateBranchDto, currentUser);
   }
@@ -62,7 +72,7 @@ export class BranchesController {
   @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER, UserRole.AGENCY_MANAGER)
   remove(
     @Param('id') id: string,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.branchesService.remove(id, currentUser);
   }

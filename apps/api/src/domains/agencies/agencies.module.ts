@@ -4,6 +4,6 @@ import { AgenciesService } from './agencies.service';
 
 @Module({
   controllers: [AgenciesController],
-  providers: [AgenciesService]
+  providers: [AgenciesService],
 })
 export class AgenciesModule {}

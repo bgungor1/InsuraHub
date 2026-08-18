@@ -25,7 +25,7 @@ export class AgenciesController {
   @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER)
   create(
     @Body() createAgencyDto: CreateAgencyDto,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.agenciesService.create(createAgencyDto, currentUser);
   }
@@ -34,7 +34,7 @@ export class AgenciesController {
   @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER, UserRole.AGENCY_MANAGER)
   findAll(
     @Query() query: QueryAgencyDto,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.agenciesService.findAll(query, currentUser);
   }
@@ -43,7 +43,7 @@ export class AgenciesController {
   @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER, UserRole.AGENCY_MANAGER)
   findOne(
     @Param('id') id: string,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.agenciesService.findOne(id, currentUser);
   }
@@ -53,7 +53,7 @@ export class AgenciesController {
   update(
     @Param('id') id: string,
     @Body() updateAgencyDto: UpdateAgencyDto,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.agenciesService.update(id, updateAgencyDto, currentUser);
   }
@@ -62,7 +62,7 @@ export class AgenciesController {
   @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER)
   remove(
     @Param('id') id: string,
-    @CurrentUser() currentUser: AuthenticatedUser
+    @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.agenciesService.remove(id, currentUser);
   }
