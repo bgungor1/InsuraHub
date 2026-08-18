@@ -4,13 +4,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
 import { PoliciesModule } from './policies/policies.module';
 import { FinanceModule } from './finance/finance.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { CompaniesModule } from './domains/companies/companies.module';
 import { AgenciesModule } from './domains/agencies/agencies.module';
 import { BranchesModule } from './domains/branches/branches.module';
+import { UsersModule } from './domains/users/users.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
