@@ -21,7 +21,7 @@ import { CreateUserDto, UpdateUserDto, QueryUserDto } from './dto';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

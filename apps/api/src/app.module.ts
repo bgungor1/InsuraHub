@@ -14,10 +14,14 @@ import { UsersModule } from './domains/users/users.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
-    throw new Error('❌ Environment variable validation error: DATABASE_URL is required!');
+    throw new Error(
+      '❌ Environment variable validation error: DATABASE_URL is required!',
+    );
   }
   if (!config.JWT_SECRET) {
-    throw new Error('❌ Environment variable validation error: JWT_SECRET is required!');
+    throw new Error(
+      '❌ Environment variable validation error: JWT_SECRET is required!',
+    );
   }
   return config;
 }

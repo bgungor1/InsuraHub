@@ -1,0 +1,111 @@
+name: InsuraHub CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: '10.25.0'
+  NODE_VERSION: '20'
+
+jobs:
+  lint-and-typecheck:
+    name: 🔍 Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/insurahub_ci"
+        run: pnpm --filter api exec prisma generate
+
+      - name: Run ESLint
+        run: pnpm lint
+
+  test-backend:
+    name: 🧪 Backend Tests (NestJS & Jest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/insurahub_ci"
+        run: pnpm --filter api exec prisma generate
+
+      - name: Run API Unit Tests
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/insurahub_ci"
+          JWT_SECRET: "ci_jwt_super_secret_test_key_2026"
+        run: pnpm --filter api test
+
+  build-monorepo:
+    name: 🏗️ Production Build Verification
+    needs: [lint-and-typecheck, test-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/insurahub_ci"
+        run: pnpm --filter api exec prisma generate
+
+      - name: Build Monorepo (Turbo)
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/insurahub_ci"
+          JWT_SECRET: "ci_jwt_super_secret_test_key_2026"
+          NEXT_PUBLIC_API_URL: "http://localhost:3001"
+        run: pnpm build

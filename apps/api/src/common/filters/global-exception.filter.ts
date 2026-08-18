@@ -1,4 +1,11 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 
@@ -12,7 +19,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | string[] | Record<string, unknown> = 'Sunucu tarafında beklenmeyen bir hata oluştu.';
+    let message: string | string[] | Record<string, unknown> =
+      'Sunucu tarafında beklenmeyen bir hata oluştu.';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -20,7 +28,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         const respObj = exceptionResponse as Record<string, unknown>;
         message = (respObj.message as string | string[]) || respObj;
       }

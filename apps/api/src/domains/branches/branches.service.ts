@@ -18,23 +18,42 @@ export class BranchesService {
       where: { id: dto.agencyId },
       select: { id: true, companyId: true },
     });
-    if (!agency) throw new NotFoundException('Bağlanmaya çalışılan acente bulunamadı.');
+    if (!agency)
+      throw new NotFoundException('Bağlanmaya çalışılan acente bulunamadı.');
 
-    if (user.role === UserRole.COMPANY_USER && agency.companyId !== user.companyId) {
-      throw new ForbiddenException('Yalnızca kendi şirketinize ait acentelerde şube oluşturabilirsiniz.');
+    if (
+      user.role === UserRole.COMPANY_USER &&
+      agency.companyId !== user.companyId
+    ) {
+      throw new ForbiddenException(
+        'Yalnızca kendi şirketinize ait acentelerde şube oluşturabilirsiniz.',
+      );
     }
     if (user.role === UserRole.AGENCY_MANAGER && agency.id !== user.agencyId) {
-      throw new ForbiddenException('Yalnızca kendi acentenize ait şube oluşturabilirsiniz.');
+      throw new ForbiddenException(
+        'Yalnızca kendi acentenize ait şube oluşturabilirsiniz.',
+      );
     }
 
     const existing = await this.prisma.branch.findUnique({
       where: { name_agencyId: { name: dto.name, agencyId: dto.agencyId } },
     });
-    if (existing) throw new ConflictException('Bu acenteye ait aynı isimde bir şube zaten mevcut.');
+    if (existing)
+      throw new ConflictException(
+        'Bu acenteye ait aynı isimde bir şube zaten mevcut.',
+      );
 
     return this.prisma.branch.create({
       data: dto,
-      include: { agency: { select: { id: true, name: true, company: { select: { id: true, name: true } } } } },
+      include: {
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            company: { select: { id: true, name: true } },
+          },
+        },
+      },
     });
   }
 
@@ -63,7 +82,13 @@ export class BranchesService {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          agency: { select: { id: true, name: true, company: { select: { id: true, name: true } } } },
+          agency: {
+            select: {
+              id: true,
+              name: true,
+              company: { select: { id: true, name: true } },
+            },
+          },
           _count: { select: { users: true, policies: true } },
         },
       }),
@@ -71,24 +96,44 @@ export class BranchesService {
     ]);
 
     const limit = query.limit ?? 10;
-    return { items, total, page: query.page ?? 1, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      items,
+      total,
+      page: query.page ?? 1,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string, user: AuthenticatedUser) {
     const branch = await this.prisma.branch.findUnique({
       where: { id },
       include: {
-        agency: { select: { id: true, name: true, company: { select: { id: true, name: true } } } },
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            company: { select: { id: true, name: true } },
+          },
+        },
         _count: { select: { users: true, policies: true } },
       },
     });
     if (!branch) throw new NotFoundException('Şube bulunamadı.');
 
-    if (user.role === UserRole.COMPANY_USER && branch.agency.company.id !== user.companyId) {
+    if (
+      user.role === UserRole.COMPANY_USER &&
+      branch.agency.company.id !== user.companyId
+    ) {
       throw new ForbiddenException('Bu şubeye erişim yetkiniz yok.');
     }
-    if (user.role === UserRole.AGENCY_MANAGER && branch.agencyId !== user.agencyId) {
-      throw new ForbiddenException('Yalnızca kendi acentenize ait şubelere erişebilirsiniz.');
+    if (
+      user.role === UserRole.AGENCY_MANAGER &&
+      branch.agencyId !== user.agencyId
+    ) {
+      throw new ForbiddenException(
+        'Yalnızca kendi acentenize ait şubelere erişebilirsiniz.',
+      );
     }
     if (user.role === UserRole.BRANCH_MANAGER && branch.id !== user.branchId) {
       throw new ForbiddenException('Yalnızca kendi şubenize erişebilirsiniz.');
@@ -105,7 +150,10 @@ export class BranchesService {
       const duplicate = await this.prisma.branch.findFirst({
         where: { name: dto.name, agencyId: targetAgencyId, NOT: { id } },
       });
-      if (duplicate) throw new ConflictException('Bu acenteye ait aynı isimde başka bir şube zaten mevcut.');
+      if (duplicate)
+        throw new ConflictException(
+          'Bu acenteye ait aynı isimde başka bir şube zaten mevcut.',
+        );
     }
 
     return this.prisma.branch.update({

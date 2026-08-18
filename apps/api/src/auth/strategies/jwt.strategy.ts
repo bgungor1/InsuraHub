@@ -41,7 +41,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-
   async validate(payload: JwtPayload) {
     if (!payload) {
       throw new UnauthorizedException('Geçersiz token');

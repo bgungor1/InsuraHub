@@ -1,11 +1,15 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCompanyDto, QueryCompanyDto, UpdateCompanyDto } from './dto';
 
 @Injectable()
 export class CompaniesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createCompanyDto: CreateCompanyDto) {
     const existingName = await this.prisma.company.findUnique({
@@ -20,7 +24,9 @@ export class CompaniesService {
         where: { taxNumber: createCompanyDto.taxNumber },
       });
       if (existingTax) {
-        throw new ConflictException('Bu vergi numarasına sahip bir şirket zaten mevcut.');
+        throw new ConflictException(
+          'Bu vergi numarasına sahip bir şirket zaten mevcut.',
+        );
       }
     }
 
@@ -114,7 +120,9 @@ export class CompaniesService {
         where: { taxNumber: updateCompanyDto.taxNumber, NOT: { id } },
       });
       if (existingTax) {
-        throw new ConflictException('Bu vergi numarasına sahip başka bir şirket zaten mevcut.');
+        throw new ConflictException(
+          'Bu vergi numarasına sahip başka bir şirket zaten mevcut.',
+        );
       }
     }
 

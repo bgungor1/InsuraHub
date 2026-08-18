@@ -1,0 +1,55 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: insurahub-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-mongodb://mongodb:27017/insurahub}
+      - JWT_SECRET=${JWT_SECRET:-insurahub_jwt_super_secret_key_production}
+      - JWT_EXPIRATION=8h
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      - mongodb
+    networks:
+      - insurahub-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: insurahub-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    depends_on:
+      - api
+    networks:
+      - insurahub-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: insurahub-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - insurahub-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  insurahub-network:
+    driver: bridge

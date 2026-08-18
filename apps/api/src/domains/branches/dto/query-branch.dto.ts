@@ -4,11 +4,15 @@ import { PaginationDto } from '../../../common/dto';
 
 export class QueryBranchDto extends PaginationDto {
   @IsOptional()
-  @IsMongoId({ message: 'Geçerli bir Acente ID (MongoDB ObjectId) girilmelidir.' })
+  @IsMongoId({
+    message: 'Geçerli bir Acente ID (MongoDB ObjectId) girilmelidir.',
+  })
   agencyId?: string;
 
   @IsOptional()
-  @IsMongoId({ message: 'Geçerli bir Şirket ID (MongoDB ObjectId) girilmelidir.' })
+  @IsMongoId({
+    message: 'Geçerli bir Şirket ID (MongoDB ObjectId) girilmelidir.',
+  })
   companyId?: string;
 
   @IsOptional()
