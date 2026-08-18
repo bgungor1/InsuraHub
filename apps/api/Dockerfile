@@ -23,7 +23,6 @@ ENV DATABASE_URL="mongodb://localhost:27017/insurahub"
 ENV JWT_SECRET="build_jwt_secret_placeholder"
 RUN pnpm --filter api exec prisma generate
 RUN pnpm --filter api build
-RUN pnpm --filter api --prod deploy /prod/api
 
 # Stage 4: Production Runner
 FROM node:20-alpine AS runner
