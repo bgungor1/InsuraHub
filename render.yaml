@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: insurahub-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter api exec prisma generate && pnpm --filter api build
+    startCommand: pnpm --filter api start:prod
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 8h
+      - key: FRONTEND_URL
+        sync: false
