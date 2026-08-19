@@ -40,10 +40,18 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
       policyAssignment: { upsert: jest.fn(), updateMany: jest.fn() },
       $transaction: jest.fn((callback: (tx: any) => any) =>
         callback({
-          policy: { update: jest.fn().mockImplementation(({ data }) => ({ id: 'pol_1', ...data })) },
+          policy: {
+            update: jest
+              .fn()
+              .mockImplementation(({ data }) => ({ id: 'pol_1', ...data })),
+          },
           commissionSnapshot: {
-            create: jest.fn().mockResolvedValue({ id: 'snap_1', totalAmount: 5000 }),
-            upsert: jest.fn().mockResolvedValue({ id: 'snap_1', totalAmount: 5000 }),
+            create: jest
+              .fn()
+              .mockResolvedValue({ id: 'snap_1', totalAmount: 5000 }),
+            upsert: jest
+              .fn()
+              .mockResolvedValue({ id: 'snap_1', totalAmount: 5000 }),
           },
           policyAssignment: { upsert: jest.fn(), updateMany: jest.fn() },
         }),
@@ -101,9 +109,9 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
       });
 
       // Broker B tries to claim simultaneously:
-      await expect(
-        service.claim('pol_1', mockBrokerUser),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.claim('pol_1', mockBrokerUser)).rejects.toThrow(
+        ConflictException,
+      );
 
       expect(gateway.broadcastPolicyClaimed).not.toHaveBeenCalled();
     });
@@ -118,7 +126,11 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
         brokerId: mockBrokerUser.userId,
       });
 
-      const result = await service.release('pol_1', { reason: 'Müşteriye ulaşılamadı' }, mockBrokerUser);
+      const result = await service.release(
+        'pol_1',
+        { reason: 'Müşteriye ulaşılamadı' },
+        mockBrokerUser,
+      );
 
       expect(result).toBeDefined();
       expect(gateway.broadcastPolicyReleased).toHaveBeenCalledWith('pol_1');
