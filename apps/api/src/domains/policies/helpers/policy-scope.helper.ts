@@ -1,7 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import type { AuthenticatedUser } from '../../../auth/decorators';
 
@@ -18,7 +15,9 @@ export class PolicyScopeHelper {
       return branchId;
     }
     if (user.branchId) return user.branchId;
-    throw new ForbiddenException('Kullanıcının bağlı olduğu bir şube bulunmamaktadır.');
+    throw new ForbiddenException(
+      'Kullanıcının bağlı olduğu bir şube bulunmamaktadır.',
+    );
   }
 
   static applyOrganizationalScope(
@@ -31,7 +30,8 @@ export class PolicyScopeHelper {
     } else if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
       where.branch = { agencyId: user.agencyId };
     } else if (
-      (user.role === UserRole.BRANCH_MANAGER || user.role === UserRole.BROKER) &&
+      (user.role === UserRole.BRANCH_MANAGER ||
+        user.role === UserRole.BROKER) &&
       user.branchId
     ) {
       where.branchId = user.branchId;
@@ -44,10 +44,13 @@ export class PolicyScopeHelper {
   ): void {
     if (user.role === UserRole.SUPERADMIN) return;
     if (
-      (user.role === UserRole.BRANCH_MANAGER || user.role === UserRole.BROKER) &&
+      (user.role === UserRole.BRANCH_MANAGER ||
+        user.role === UserRole.BROKER) &&
       policy.branchId !== user.branchId
     ) {
-      throw new ForbiddenException('Bu poliçeye erişim yetkiniz bulunmamaktadır.');
+      throw new ForbiddenException(
+        'Bu poliçeye erişim yetkiniz bulunmamaktadır.',
+      );
     }
   }
 }
