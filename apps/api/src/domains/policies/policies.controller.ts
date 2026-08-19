@@ -91,13 +91,18 @@ export class PoliciesController {
   }
 
   @Post(':id/claim')
+  @Patch(':id/claim')
   @Roles(UserRole.SUPERADMIN, UserRole.BRANCH_MANAGER, UserRole.BROKER)
-  async claim(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+  async claim(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     const data = await this.policiesService.claim(id, user);
     return { message: 'Poliçe başarıyla üzerinize alındı.', data };
   }
 
   @Post(':id/release')
+  @Patch(':id/release')
   @Roles(UserRole.SUPERADMIN, UserRole.BRANCH_MANAGER, UserRole.BROKER)
   async release(
     @Param('id') id: string,
@@ -109,6 +114,7 @@ export class PoliciesController {
   }
 
   @Post(':id/complete')
+  @Patch(':id/complete')
   @Roles(UserRole.SUPERADMIN, UserRole.BRANCH_MANAGER, UserRole.BROKER)
   async complete(
     @Param('id') id: string,
@@ -116,13 +122,11 @@ export class PoliciesController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.policiesService.complete(id, dto, user);
-    return {
-      message: 'Poliçe tamamlandı ve komisyon payları hesaplandı.',
-      data,
-    };
+    return { message: 'Poliçe tamamlandı ve komisyon payları hesaplandı.', data };
   }
 
   @Post(':id/cancel')
+  @Patch(':id/cancel')
   @Roles(
     UserRole.SUPERADMIN,
     UserRole.COMPANY_USER,

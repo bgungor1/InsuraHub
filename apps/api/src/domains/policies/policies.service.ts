@@ -16,10 +16,14 @@ import {
 } from './dto';
 import { PolicyScopeHelper } from './helpers/policy-scope.helper';
 import { CommissionCalculatorHelper } from './helpers/commission-calculator.helper';
+import { PoliciesGateway } from './policies.gateway';
 
 @Injectable()
 export class PoliciesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly policiesGateway: PoliciesGateway,
+  ) {}
 
   async create(dto: CreatePolicyDto, user: AuthenticatedUser) {
     const customer = await this.prisma.customer.findUnique({
@@ -42,7 +46,7 @@ export class PoliciesService {
         ? (dto.brokerId ?? user.userId)
         : (dto.brokerId ?? null);
 
-    return this.prisma.policy.create({
+    const policy = await this.prisma.policy.create({
       data: {
         product: dto.product,
         state,
@@ -57,6 +61,14 @@ export class PoliciesService {
         broker: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     });
+
+    this.policiesGateway.broadcastPolicyCreated({
+      policyId: policy.id,
+      product: policy.product,
+      branchId: policy.branchId,
+    });
+
+    return policy;
   }
 
   async findAll(query: QueryPolicyDto, user: AuthenticatedUser) {
@@ -130,7 +142,7 @@ export class PoliciesService {
       throw new ConflictException('Poliçe havuzda değil veya başka bir broker tarafından alınmış.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.policyAssignment.upsert({
         where: { policyId: id },
         create: { policyId: id, claimedById: user.userId, assignedAt: new Date() },
@@ -147,6 +159,9 @@ export class PoliciesService {
         },
       });
     });
+
+    this.policiesGateway.broadcastPolicyClaimed(id, user.userId);
+    return updated;
   }
 
   async release(id: string, dto: ReleasePolicyDto, user: AuthenticatedUser) {
@@ -162,7 +177,7 @@ export class PoliciesService {
       throw new ForbiddenException('Yalnızca kendi üzerinize aldığınız poliçeyi bırakabilirsiniz.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.policyAssignment.updateMany({
         where: { policyId: id },
         data: { releasedAt: new Date(), releaseReason: dto.reason || 'Manuel havuz iadesi' },
@@ -173,6 +188,9 @@ export class PoliciesService {
         data: { state: PolicyState.UNASSIGNED, brokerId: null },
       });
     });
+
+    this.policiesGateway.broadcastPolicyReleased(id);
+    return updated;
   }
 
   async complete(id: string, dto: CompletePolicyDto, user: AuthenticatedUser) {
@@ -199,7 +217,7 @@ export class PoliciesService {
 
     const shares = CommissionCalculatorHelper.calculateShares(dto.totalAmount, activeRule);
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.commissionSnapshot.create({
         data: {
           policyId: id,
@@ -219,6 +237,9 @@ export class PoliciesService {
         include: { snapshot: true, customer: true },
       });
     });
+
+    this.policiesGateway.broadcastPolicyCompleted(id);
+    return updated;
   }
 
   async cancel(id: string, user: AuthenticatedUser) {
