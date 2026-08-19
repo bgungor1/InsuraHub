@@ -34,7 +34,11 @@ export class PoliciesGateway
     this.logger.debug(`Client ayrıldı: ${client.id}`);
   }
 
-  broadcastPolicyCreated(payload: { policyId: string; product: string; branchId: string }) {
+  broadcastPolicyCreated(payload: {
+    policyId: string;
+    product: string;
+    branchId: string;
+  }) {
     this.server?.emit('policy_created', payload);
   }
 

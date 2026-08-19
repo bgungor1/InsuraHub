@@ -29,7 +29,8 @@ export class PoliciesService {
     const customer = await this.prisma.customer.findUnique({
       where: { id: dto.customerId },
     });
-    if (!customer) throw new NotFoundException('Belirtilen müşteri bulunamadı.');
+    if (!customer)
+      throw new NotFoundException('Belirtilen müşteri bulunamadı.');
 
     const branchId = PolicyScopeHelper.resolveBranchId(dto.branchId, user);
 
@@ -56,9 +57,18 @@ export class PoliciesService {
         previousPolicyId: dto.previousPolicyId ?? null,
       },
       include: {
-        customer: { select: { id: true, firstName: true, lastName: true, identityNo: true } },
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            identityNo: true,
+          },
+        },
         branch: { select: { id: true, name: true } },
-        broker: { select: { id: true, firstName: true, lastName: true, email: true } },
+        broker: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
       },
     });
 
@@ -72,14 +82,24 @@ export class PoliciesService {
   }
 
   async findAll(query: QueryPolicyDto, user: AuthenticatedUser) {
-    const { skip, take, search, state, customerId, branchId, brokerId, product } = query;
+    const {
+      skip,
+      take,
+      search,
+      state,
+      customerId,
+      branchId,
+      brokerId,
+      product,
+    } = query;
     const where: Prisma.PolicyWhereInput = {};
 
     PolicyScopeHelper.applyOrganizationalScope(where, user);
 
     if (state) where.state = state;
     if (customerId) where.customerId = customerId;
-    if (branchId && user.role === UserRole.SUPERADMIN) where.branchId = branchId;
+    if (branchId && user.role === UserRole.SUPERADMIN)
+      where.branchId = branchId;
     if (brokerId) where.brokerId = brokerId;
     if (product) where.product = { contains: product, mode: 'insensitive' };
 
@@ -99,7 +119,14 @@ export class PoliciesService {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          customer: { select: { id: true, firstName: true, lastName: true, identityNo: true } },
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              identityNo: true,
+            },
+          },
           branch: { select: { id: true, name: true } },
           broker: { select: { id: true, firstName: true, lastName: true } },
           snapshot: { select: { id: true, totalAmount: true } },
@@ -120,8 +147,16 @@ export class PoliciesService {
       include: {
         customer: true,
         branch: { include: { agency: { include: { company: true } } } },
-        broker: { select: { id: true, firstName: true, lastName: true, email: true } },
-        assignment: { include: { claimedBy: { select: { id: true, firstName: true, lastName: true } } } },
+        broker: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignment: {
+          include: {
+            claimedBy: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+        },
         snapshot: { include: { rule: true } },
         previousPolicy: true,
         renewals: true,
@@ -139,14 +174,25 @@ export class PoliciesService {
     PolicyScopeHelper.verifyPolicyScope(policy, user);
 
     if (policy.state !== PolicyState.UNASSIGNED) {
-      throw new ConflictException('Poliçe havuzda değil veya başka bir broker tarafından alınmış.');
+      throw new ConflictException(
+        'Poliçe havuzda değil veya başka bir broker tarafından alınmış.',
+      );
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.policyAssignment.upsert({
         where: { policyId: id },
-        create: { policyId: id, claimedById: user.userId, assignedAt: new Date() },
-        update: { claimedById: user.userId, assignedAt: new Date(), releasedAt: null, releaseReason: null },
+        create: {
+          policyId: id,
+          claimedById: user.userId,
+          assignedAt: new Date(),
+        },
+        update: {
+          claimedById: user.userId,
+          assignedAt: new Date(),
+          releasedAt: null,
+          releaseReason: null,
+        },
       });
 
       return tx.policy.update({
@@ -170,17 +216,24 @@ export class PoliciesService {
     PolicyScopeHelper.verifyPolicyScope(policy, user);
 
     if (policy.state !== PolicyState.CLAIMED) {
-      throw new ConflictException('Yalnızca talep edilmiş poliçeler havuza bırakılabilir.');
+      throw new ConflictException(
+        'Yalnızca talep edilmiş poliçeler havuza bırakılabilir.',
+      );
     }
 
     if (user.role === UserRole.BROKER && policy.brokerId !== user.userId) {
-      throw new ForbiddenException('Yalnızca kendi üzerinize aldığınız poliçeyi bırakabilirsiniz.');
+      throw new ForbiddenException(
+        'Yalnızca kendi üzerinize aldığınız poliçeyi bırakabilirsiniz.',
+      );
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.policyAssignment.updateMany({
         where: { policyId: id },
-        data: { releasedAt: new Date(), releaseReason: dto.reason || 'Manuel havuz iadesi' },
+        data: {
+          releasedAt: new Date(),
+          releaseReason: dto.reason || 'Manuel havuz iadesi',
+        },
       });
 
       return tx.policy.update({
@@ -199,7 +252,9 @@ export class PoliciesService {
     PolicyScopeHelper.verifyPolicyScope(policy, user);
 
     if (policy.state !== PolicyState.CLAIMED) {
-      throw new ConflictException('Yalnızca talep edilmiş ve işlenen poliçeler tamamlanabilir.');
+      throw new ConflictException(
+        'Yalnızca talep edilmiş ve işlenen poliçeler tamamlanabilir.',
+      );
     }
 
     const now = new Date();
@@ -212,10 +267,15 @@ export class PoliciesService {
     });
 
     if (!activeRule) {
-      throw new ConflictException('Poliçeyi tamamlamak için geçerli bir komisyon kuralı bulunamadı.');
+      throw new ConflictException(
+        'Poliçeyi tamamlamak için geçerli bir komisyon kuralı bulunamadı.',
+      );
     }
 
-    const shares = CommissionCalculatorHelper.calculateShares(dto.totalAmount, activeRule);
+    const shares = CommissionCalculatorHelper.calculateShares(
+      dto.totalAmount,
+      activeRule,
+    );
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.commissionSnapshot.create({
@@ -245,7 +305,9 @@ export class PoliciesService {
   async cancel(id: string, user: AuthenticatedUser) {
     const policy = await this.findOne(id, user);
     if (policy.state === PolicyState.COMPLETED) {
-      throw new ConflictException('Tamamlanmış ve komisyonu hesaplanmış poliçe iptal edilemez.');
+      throw new ConflictException(
+        'Tamamlanmış ve komisyonu hesaplanmış poliçe iptal edilemez.',
+      );
     }
 
     return this.prisma.policy.update({
@@ -257,7 +319,9 @@ export class PoliciesService {
   async update(id: string, dto: UpdatePolicyDto, user: AuthenticatedUser) {
     const policy = await this.findOne(id, user);
     if (policy.state === PolicyState.COMPLETED) {
-      throw new ConflictException('Tamamlanmış poliçeler üzerinde düzenleme yapılamaz.');
+      throw new ConflictException(
+        'Tamamlanmış poliçeler üzerinde düzenleme yapılamaz.',
+      );
     }
 
     return this.prisma.policy.update({
