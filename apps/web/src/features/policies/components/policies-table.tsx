@@ -7,20 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePoliciesQuery } from '../hooks/use-policies-query';
 import { usePolicyActionsMutations } from '../hooks/use-policy-actions-mutations';
+import { POLICY_STATE_MAP } from '../schemas/policy.schema';
 import type { Policy, PolicyState } from '../types/policy.types';
 
 interface PoliciesTableProps {
   search?: string;
   state?: PolicyState;
 }
-
-const STATE_MAP: Record<PolicyState, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  DRAFT: { label: 'Taslak', variant: 'outline' },
-  UNASSIGNED: { label: 'Havuzda', variant: 'secondary' },
-  CLAIMED: { label: 'İşlemde', variant: 'default' },
-  COMPLETED: { label: 'Tamamlandı', variant: 'outline' },
-  CANCELLED: { label: 'İptal', variant: 'destructive' },
-};
 
 export function PoliciesTable({ search, state }: PoliciesTableProps) {
   const { data, isLoading, isError, refetch } = usePoliciesQuery({ search, state, limit: 50 });
@@ -35,8 +28,7 @@ export function PoliciesTable({ search, state }: PoliciesTableProps) {
         minWidth: 180,
         valueGetter: (params) => {
           const c = params.data?.customer;
-          if (!c) return '-';
-          return `${c.firstName} ${c.lastName || ''}`.trim();
+          return c ? `${c.firstName} ${c.lastName || ''}`.trim() : '-';
         },
       },
       {
@@ -69,31 +61,49 @@ export function PoliciesTable({ search, state }: PoliciesTableProps) {
         flex: 1.2,
         minWidth: 120,
         cellRenderer: (params: { value: PolicyState }) => {
-          const cfg = STATE_MAP[params.value] || { label: params.value, variant: 'outline' };
+          const cfg = POLICY_STATE_MAP[params.value] || { label: params.value, variant: 'outline' };
           return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
         },
       },
       {
         headerName: 'İşlemler',
-        flex: 1.5,
-        minWidth: 140,
+        flex: 1.6,
+        minWidth: 160,
         cellRenderer: (params: { data?: Policy }) => {
           const p = params.data;
           if (!p) return null;
           if (p.state === 'UNASSIGNED') {
             return (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => claimMutation.mutate(p.id)}>
-                Üzerime Al
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs font-semibold"
+                disabled={claimMutation.isPending}
+                onClick={() => claimMutation.mutate(p.id)}
+              >
+                {claimMutation.isPending ? 'Alınıyor...' : 'Poliçeyi Al'}
               </Button>
             );
           }
           if (p.state === 'CLAIMED') {
             return (
               <div className="flex items-center gap-1">
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => releaseMutation.mutate({ id: p.id })}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  disabled={releaseMutation.isPending}
+                  onClick={() => releaseMutation.mutate({ id: p.id })}
+                >
                   Havuza Bırak
                 </Button>
-                <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => cancelMutation.mutate(p.id)}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 text-xs"
+                  disabled={cancelMutation.isPending}
+                  onClick={() => cancelMutation.mutate(p.id)}
+                >
                   İptal
                 </Button>
               </div>
