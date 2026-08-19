@@ -59,4 +59,12 @@ export const queryKeys = {
     details: () => [...queryKeys.branches.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.branches.details(), id] as const,
   },
+  customers: {
+    all: ['customers'] as const,
+    lists: () => [...queryKeys.customers.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.customers.lists(), filters] as const,
+    details: () => [...queryKeys.customers.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.customers.details(), id] as const,
+    lookup: (identityNo: string) => [...queryKeys.customers.all, 'lookup', identityNo] as const,
+  },
 } as const;
