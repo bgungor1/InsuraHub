@@ -8,6 +8,10 @@ export const queryKeys = {
     session: () => [...queryKeys.auth.all, 'session'] as const,
     me: () => [...queryKeys.auth.all, 'me'] as const,
   },
+  dashboard: {
+    all: ['dashboard'] as const,
+    summary: () => [...queryKeys.dashboard.all, 'summary'] as const,
+  },
   users: {
     all: ['users'] as const,
     lists: () => [...queryKeys.users.all, 'list'] as const,

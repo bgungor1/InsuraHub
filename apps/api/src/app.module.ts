@@ -13,6 +13,7 @@ import { UsersModule } from './domains/users/users.module';
 import { CustomersModule } from './domains/customers/customers.module';
 import { PoliciesModule } from './domains/policies/policies.module';
 import { CommissionsModule } from './domains/commissions/commissions.module';
+import { DashboardModule } from './domains/dashboard/dashboard.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
@@ -45,6 +46,7 @@ function validateEnv(config: Record<string, unknown>) {
     FinanceModule,
     TicketsModule,
     CommissionsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
