@@ -108,7 +108,12 @@ export class CustomersService {
               select: { id: true, name: true },
             },
             broker: {
-              select: { id: true, firstName: true, lastName: true, email: true },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
             },
           },
         },

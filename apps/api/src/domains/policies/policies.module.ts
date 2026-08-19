@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { PoliciesService } from './policies.service';
 import { PoliciesController } from './policies.controller';
+import { PoliciesService } from './policies.service';
 
 @Module({
   controllers: [PoliciesController],
