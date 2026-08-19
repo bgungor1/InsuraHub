@@ -11,6 +11,7 @@ import { CompaniesModule } from './domains/companies/companies.module';
 import { AgenciesModule } from './domains/agencies/agencies.module';
 import { BranchesModule } from './domains/branches/branches.module';
 import { UsersModule } from './domains/users/users.module';
+import { CustomersModule } from './domains/customers/customers.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
@@ -41,6 +42,7 @@ function validateEnv(config: Record<string, unknown>) {
     CompaniesModule,
     AgenciesModule,
     BranchesModule,
+    CustomersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
