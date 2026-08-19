@@ -2,27 +2,28 @@
 
 import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, RefreshCw, Search } from 'lucide-react';
+import { FileText, Plus, RefreshCw, Search, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { queryKeys } from '@/lib/api';
 import {
   CreatePolicyDialog,
   PoliciesTable,
+  usePoliciesRealtime,
   type PolicyState,
 } from '@/features/policies';
 
 export default function PoliciesPage() {
   const queryClient = useQueryClient();
+  const { isConnected } = usePoliciesRealtime();
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [selectedState, setSelectedState] = React.useState<PolicyState | undefined>(undefined);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
+    const handler = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(handler);
   }, [search]);
 
@@ -38,12 +39,14 @@ export default function PoliciesPage() {
             <FileText className="size-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Poliçe Yönetimi ve Havuz
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Havuzdaki poliçeleri üzerinize alın, durumlarını yönetin ve komisyon süreçlerini takip edin.
-            </p>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Poliçe Havuzu</h1>
+              <Badge variant={isConnected ? 'default' : 'outline'} className="gap-1 text-[11px] py-0.5">
+                <Radio className={`size-3 ${isConnected ? 'animate-pulse text-emerald-400' : 'text-muted-foreground'}`} />
+                {isConnected ? 'Canlı Senkronize' : 'Bağlanıyor...'}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">Havuzdaki poliçeleri canlı takip edin, anında üzerinize alın.</p>
           </div>
         </div>
 
@@ -52,8 +55,7 @@ export default function PoliciesPage() {
             <RefreshCw className="size-4" />
           </Button>
           <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            Yeni Poliçe
+            <Plus className="size-4" /> Yeni Poliçe
           </Button>
         </div>
       </div>
@@ -70,39 +72,31 @@ export default function PoliciesPage() {
         </div>
 
         <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1 text-xs">
-          <button
-            onClick={() => setSelectedState(undefined)}
-            className={`rounded-md px-3 py-1.5 font-medium transition-all ${!selectedState ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Tümü
-          </button>
-          <button
-            onClick={() => setSelectedState('UNASSIGNED')}
-            className={`rounded-md px-3 py-1.5 font-medium transition-all ${selectedState === 'UNASSIGNED' ? 'bg-background shadow-xs text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Havuz (Bekleyen)
-          </button>
-          <button
-            onClick={() => setSelectedState('CLAIMED')}
-            className={`rounded-md px-3 py-1.5 font-medium transition-all ${selectedState === 'CLAIMED' ? 'bg-background shadow-xs text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            İşlemde (Atanan)
-          </button>
-          <button
-            onClick={() => setSelectedState('COMPLETED')}
-            className={`rounded-md px-3 py-1.5 font-medium transition-all ${selectedState === 'COMPLETED' ? 'bg-background shadow-xs text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Tamamlanan
-          </button>
+          {(
+            [
+              { label: 'Tümü', value: undefined },
+              { label: 'Havuz (Bekleyen)', value: 'UNASSIGNED' as const },
+              { label: 'İşlemde (Atanan)', value: 'CLAIMED' as const },
+              { label: 'Tamamlanan', value: 'COMPLETED' as const },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.label}
+              onClick={() => setSelectedState(tab.value)}
+              className={`rounded-md px-3 py-1.5 font-medium transition-all ${
+                selectedState === tab.value
+                  ? 'bg-background shadow-xs text-foreground font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       <PoliciesTable search={debouncedSearch} state={selectedState} />
-
-      <CreatePolicyDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-      />
+      <CreatePolicyDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
     </div>
   );
 }

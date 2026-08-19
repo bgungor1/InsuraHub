@@ -12,6 +12,17 @@ export const PRODUCT_OPTIONS = [
   'DİĞER',
 ] as const;
 
+export const POLICY_STATE_MAP: Record<
+  PolicyState,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+> = {
+  DRAFT: { label: 'Taslak', variant: 'outline' },
+  UNASSIGNED: { label: 'Havuzda', variant: 'secondary' },
+  CLAIMED: { label: 'İşlemde', variant: 'default' },
+  COMPLETED: { label: 'Tamamlandı', variant: 'outline' },
+  CANCELLED: { label: 'İptal', variant: 'destructive' },
+};
+
 export const createPolicySchema = z.object({
   product: z
     .string()

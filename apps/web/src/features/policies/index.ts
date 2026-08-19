@@ -4,5 +4,6 @@ export * from './services/policies.service';
 export * from './hooks/use-policies-query';
 export * from './hooks/use-create-policy-mutation';
 export * from './hooks/use-policy-actions-mutations';
+export * from './hooks/use-policies-realtime';
 export * from './components/create-policy-dialog';
 export * from './components/policies-table';

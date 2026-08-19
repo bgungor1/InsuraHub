@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PoliciesService } from './policies.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PoliciesGateway } from './policies.gateway';
 
 describe('PoliciesService', () => {
   let service: PoliciesService;
@@ -32,6 +33,15 @@ describe('PoliciesService', () => {
                 policyAssignment: { upsert: jest.fn(), updateMany: jest.fn() },
               }),
             ),
+          },
+        },
+        {
+          provide: PoliciesGateway,
+          useValue: {
+            broadcastPolicyCreated: jest.fn(),
+            broadcastPolicyClaimed: jest.fn(),
+            broadcastPolicyReleased: jest.fn(),
+            broadcastPolicyCompleted: jest.fn(),
           },
         },
       ],

@@ -91,6 +91,7 @@ export class PoliciesController {
   }
 
   @Post(':id/claim')
+  @Patch(':id/claim')
   @Roles(UserRole.SUPERADMIN, UserRole.BRANCH_MANAGER, UserRole.BROKER)
   async claim(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     const data = await this.policiesService.claim(id, user);
@@ -98,6 +99,7 @@ export class PoliciesController {
   }
 
   @Post(':id/release')
+  @Patch(':id/release')
   @Roles(UserRole.SUPERADMIN, UserRole.BRANCH_MANAGER, UserRole.BROKER)
   async release(
     @Param('id') id: string,
@@ -109,6 +111,7 @@ export class PoliciesController {
   }
 
   @Post(':id/complete')
+  @Patch(':id/complete')
   @Roles(UserRole.SUPERADMIN, UserRole.BRANCH_MANAGER, UserRole.BROKER)
   async complete(
     @Param('id') id: string,
@@ -123,6 +126,7 @@ export class PoliciesController {
   }
 
   @Post(':id/cancel')
+  @Patch(':id/cancel')
   @Roles(
     UserRole.SUPERADMIN,
     UserRole.COMPANY_USER,
