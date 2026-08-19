@@ -26,7 +26,9 @@ export const queryKeys = {
   commissions: {
     all: ['commissions'] as const,
     rules: () => [...queryKeys.commissions.all, 'rules'] as const,
-    snapshots: (policyId?: string) => [...queryKeys.commissions.all, 'snapshots', policyId] as const,
+    activeRules: () => [...queryKeys.commissions.all, 'rules', 'active'] as const,
+    snapshots: (filters?: Record<string, unknown>) => [...queryKeys.commissions.all, 'snapshots', filters] as const,
+    snapshot: (policyId: string) => [...queryKeys.commissions.all, 'snapshot', policyId] as const,
   },
   tickets: {
     all: ['tickets'] as const,
