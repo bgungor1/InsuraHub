@@ -76,9 +76,33 @@ jobs:
           JWT_SECRET: "ci_jwt_super_secret_test_key_2026"
         run: pnpm --filter api test
 
+  test-frontend:
+    name: 🧪 Frontend Tests (Next.js & Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Web Unit & Component Tests
+        run: pnpm --filter web test
+
   build-monorepo:
     name: 🏗️ Production Build Verification
-    needs: [lint-and-typecheck, test-backend]
+    needs: [lint-and-typecheck, test-backend, test-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
