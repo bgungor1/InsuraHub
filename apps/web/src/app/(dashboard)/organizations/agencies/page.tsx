@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Store, Search, RefreshCw } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,9 +13,17 @@ import {
 } from '@/features/agencies';
 
 export default function AgenciesPage() {
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
+
+  React.useEffect(() => {
+    if (user && (user.role === 'BRANCH_MANAGER' || user.role === 'BROKER')) {
+      router.replace('/organizations/branches');
+    }
+  }, [user, router]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,6 +36,12 @@ export default function AgenciesPage() {
     search: debouncedSearch || undefined,
     limit: 50,
   });
+
+  const canCreateAgency = user?.role === 'SUPERADMIN' || user?.role === 'COMPANY_USER';
+
+  if (user?.role === 'BRANCH_MANAGER' || user?.role === 'BROKER') {
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] space-y-4">
@@ -63,10 +79,12 @@ export default function AgenciesPage() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </Button>
 
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            <span>Yeni Acente</span>
-          </Button>
+          {canCreateAgency && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              <span>Yeni Acente</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -79,7 +97,11 @@ export default function AgenciesPage() {
         />
       </div>
 
-      <CreateAgencyDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      <CreateAgencyDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        defaultCompanyId={user?.companyId || undefined}
+      />
     </div>
   );
 }

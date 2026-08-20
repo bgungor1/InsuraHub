@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Store } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   Dialog,
   DialogContent,
@@ -13,27 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { useCompaniesQuery } from '@/features/companies';
 import { useCreateAgencyMutation } from '../hooks/use-create-agency-mutation';
+import { AgencyFormFields, type AgencyFormValues } from './agency-form-fields';
 
 const agencyFormSchema = z.object({
   name: z.string().min(2, 'Acente adı en az 2 karakter olmalıdır.').max(100),
@@ -41,20 +26,40 @@ const agencyFormSchema = z.object({
   isActive: z.boolean(),
 });
 
-export type AgencyFormValues = z.infer<typeof agencyFormSchema>;
-
 interface CreateAgencyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCompanyId?: string;
 }
 
-export function CreateAgencyDialog({ open, onOpenChange, defaultCompanyId }: CreateAgencyDialogProps) {
-  const { data: companiesData, isLoading: isLoadingCompanies } = useCompaniesQuery({ limit: 100, isActive: true });
+export function CreateAgencyDialog({
+  open,
+  onOpenChange,
+  defaultCompanyId,
+}: CreateAgencyDialogProps) {
+  const user = useAuthStore((state) => state.user);
+  const effectiveCompanyId = user?.companyId || defaultCompanyId || '';
+  const isCompanyScoped = user?.role === 'COMPANY_USER' && Boolean(user.companyId);
+
+  const { data: companiesData, isLoading: isLoadingCompanies } = useCompaniesQuery({
+    limit: 100,
+    isActive: true,
+  });
+
   const form = useForm<AgencyFormValues>({
     resolver: zodResolver(agencyFormSchema),
-    defaultValues: { name: '', companyId: defaultCompanyId || '', isActive: true },
+    defaultValues: { name: '', companyId: effectiveCompanyId, isActive: true },
   });
+
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        name: '',
+        companyId: effectiveCompanyId,
+        isActive: true,
+      });
+    }
+  }, [open, effectiveCompanyId, form]);
 
   const createMutation = useCreateAgencyMutation({
     onSuccess: () => {
@@ -64,7 +69,11 @@ export function CreateAgencyDialog({ open, onOpenChange, defaultCompanyId }: Cre
   });
 
   const onSubmit = (values: AgencyFormValues) => {
-    createMutation.mutate({ name: values.name.trim(), companyId: values.companyId, isActive: values.isActive });
+    createMutation.mutate({
+      name: values.name.trim(),
+      companyId: values.companyId || effectiveCompanyId,
+      isActive: values.isActive,
+    });
   };
 
   return (
@@ -77,70 +86,35 @@ export function CreateAgencyDialog({ open, onOpenChange, defaultCompanyId }: Cre
             </div>
             <DialogTitle>Yeni Acente Ekle</DialogTitle>
           </div>
-          <DialogDescription>Sigorta şirketine bağlı çalışacak yeni bir acente oluşturun.</DialogDescription>
+          <DialogDescription>
+            {isCompanyScoped
+              ? 'Şirketinize bağlı çalışacak yeni bir acente oluşturun.'
+              : 'Sigorta şirketine bağlı çalışacak yeni bir acente oluşturun.'}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-            <FormField
-              control={form.control}
-              name="companyId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bağlı Olduğu Sigorta Şirketi *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCompanies}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingCompanies ? 'Şirketler yükleniyor...' : 'Şirket seçiniz'} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {companiesData?.items?.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Acente Adı *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Örn: Kadıköy Merkez Acentesi" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border border-border/60 p-3 shadow-xs">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-sm font-medium">Aktiflik Durumu</FormLabel>
-                    <FormDescription className="text-xs">Acente ve bağlı şubeleri sistemde aktif işlem yapabilsin mi?</FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
+            <AgencyFormFields
+              form={form}
+              isCompanyScoped={isCompanyScoped}
+              companies={companiesData?.items}
+              isLoadingCompanies={isLoadingCompanies}
             />
 
             <DialogFooter className="pt-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={createMutation.isPending}
+              >
                 İptal
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {createMutation.isPending && (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                )}
                 {createMutation.isPending ? 'Kaydediliyor...' : 'Acenteyi Oluştur'}
               </Button>
             </DialogFooter>

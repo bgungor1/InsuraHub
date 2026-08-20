@@ -65,8 +65,13 @@ export class BranchesService {
       where.agency = { companyId: user.companyId };
     } else if (user.role === UserRole.AGENCY_MANAGER) {
       where.agencyId = user.agencyId;
-    } else if (user.role === UserRole.BRANCH_MANAGER) {
-      where.id = user.branchId;
+    } else if (
+      user.role === UserRole.BRANCH_MANAGER ||
+      user.role === UserRole.BROKER
+    ) {
+      if (user.branchId) {
+        where.id = user.branchId;
+      }
     } else {
       if (query.agencyId) where.agencyId = query.agencyId;
       if (query.companyId) where.agency = { companyId: query.companyId };
@@ -135,7 +140,11 @@ export class BranchesService {
         'Yalnızca kendi acentenize ait şubelere erişebilirsiniz.',
       );
     }
-    if (user.role === UserRole.BRANCH_MANAGER && branch.id !== user.branchId) {
+    if (
+      (user.role === UserRole.BRANCH_MANAGER ||
+        user.role === UserRole.BROKER) &&
+      branch.id !== user.branchId
+    ) {
       throw new ForbiddenException('Yalnızca kendi şubenize erişebilirsiniz.');
     }
 

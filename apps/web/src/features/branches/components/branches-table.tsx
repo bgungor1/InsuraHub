@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { ColDef, ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
-import { GitBranch, Store, Building2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Branch } from '../types/branch.types';
+import { useUpdateBranchMutation } from '../hooks/use-update-branch-mutation';
+import { getBranchColumnDefs } from './branch-columns';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -14,81 +14,30 @@ interface BranchesTableProps {
   data?: Branch[];
   isLoading: boolean;
   isError: boolean;
-  onRetry: () => void;
+  onRetry?: () => void;
 }
 
-export function BranchesTable({ data, isLoading, isError, onRetry }: BranchesTableProps) {
+export function BranchesTable({
+  data,
+  isLoading,
+  isError,
+  onRetry,
+}: BranchesTableProps) {
+  const updateMutation = useUpdateBranchMutation();
+
+  const handleToggleActive = React.useCallback(
+    (branch: Branch) => {
+      updateMutation.mutate({
+        id: branch.id,
+        data: { isActive: !(branch.isActive !== false) },
+      });
+    },
+    [updateMutation],
+  );
+
   const columnDefs = React.useMemo<ColDef<Branch>[]>(
-    () => [
-      {
-        field: 'name',
-        headerName: 'Şube Adı',
-        flex: 2,
-        minWidth: 180,
-        cellRenderer: (params: { value: string }) => (
-          <div className="flex items-center gap-2 font-medium text-foreground">
-            <GitBranch className="size-4 text-primary shrink-0" />
-            <span>{params.value}</span>
-          </div>
-        ),
-      },
-      {
-        headerName: 'Bağlı Acente',
-        flex: 2,
-        minWidth: 160,
-        valueGetter: (params) => params.data?.agency?.name || '-',
-        cellRenderer: (params: { value: string }) => (
-          <div className="flex items-center gap-1.5 text-foreground/90">
-            <Store className="size-3.5 text-muted-foreground shrink-0" />
-            <span>{params.value}</span>
-          </div>
-        ),
-      },
-      {
-        headerName: 'Sigorta Şirketi',
-        flex: 2,
-        minWidth: 160,
-        valueGetter: (params) => params.data?.agency?.company?.name || '-',
-        cellRenderer: (params: { value: string }) => (
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Building2 className="size-3.5 text-muted-foreground/70 shrink-0" />
-            <span>{params.value}</span>
-          </div>
-        ),
-      },
-      {
-        headerName: 'Temsilci Sayısı',
-        flex: 1,
-        minWidth: 110,
-        valueGetter: (params) => params.data?._count?.users ?? 0,
-      },
-      {
-        headerName: 'Poliçe Sayısı',
-        flex: 1,
-        minWidth: 110,
-        valueGetter: (params) => params.data?._count?.policies ?? 0,
-      },
-      {
-        field: 'isActive',
-        headerName: 'Durum',
-        flex: 1,
-        minWidth: 100,
-        cellRenderer: (params: { value: boolean }) => (
-          <Badge variant={params.value ? 'default' : 'destructive'} className="text-[11px]">
-            {params.value ? 'Aktif' : 'Pasif'}
-          </Badge>
-        ),
-      },
-      {
-        field: 'createdAt',
-        headerName: 'Kayıt Tarihi',
-        flex: 1,
-        minWidth: 120,
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString('tr-TR') : '-',
-      },
-    ],
-    []
+    () => getBranchColumnDefs(handleToggleActive, updateMutation.isPending),
+    [handleToggleActive, updateMutation.isPending],
   );
 
   const defaultColDef = React.useMemo<ColDef>(
@@ -97,7 +46,7 @@ export function BranchesTable({ data, isLoading, isError, onRetry }: BranchesTab
       filter: true,
       resizable: true,
     }),
-    []
+    [],
   );
 
   if (isLoading) {
