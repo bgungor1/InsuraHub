@@ -31,4 +31,4 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 InsuraHub Backend running on http://localhost:${port}`);
 }
-bootstrap();
+void bootstrap();

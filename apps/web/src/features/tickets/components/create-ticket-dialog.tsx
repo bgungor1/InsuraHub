@@ -39,14 +39,9 @@ interface CreateTicketDialogProps {
 
 export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogProps) {
   const createMutation = useCreateTicketMutation();
-
   const form = useForm<CreateTicketFormValues>({
     resolver: zodResolver(createTicketSchema),
-    defaultValues: {
-      subject: '',
-      category: 'POLICY_ISSUE',
-      message: '',
-    },
+    defaultValues: { subject: '', category: 'TECHNICAL', message: '' },
   });
 
   const onSubmit = (values: CreateTicketFormValues) => {
@@ -56,8 +51,10 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
         form.reset();
         onOpenChange(false);
       },
-      onError: () => {
-        toast.error('Destek talebi oluşturulamadı. Lütfen tekrar deneyin.');
+      onError: (err: unknown) => {
+        const errData = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data;
+        const msg = Array.isArray(errData?.message) ? errData.message.join(', ') : errData?.message || 'Destek talebi oluşturulamadı.';
+        toast.error(msg);
       },
     });
   };
@@ -67,30 +64,23 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Yeni Destek Talebi Aç</DialogTitle>
-          <DialogDescription>
-            Operasyon birimine veya genel merkeze iletmek istediğiniz konuyu detaylandırın.
-          </DialogDescription>
+          <DialogDescription>Operasyon birimine veya genel merkeze iletmek istediğiniz konuyu detaylandırın.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5">
             <FormField
               control={form.control}
               name="category"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Kategori</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Kategori seçin" />
-                      </SelectTrigger>
-                    </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Kategori seçin" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      <SelectItem value="POLICY_ISSUE">Poliçe İşlemi</SelectItem>
-                      <SelectItem value="COMMISSION_INQUIRY">Komisyon Sorusu</SelectItem>
-                      <SelectItem value="TECHNICAL_SUPPORT">Teknik Destek</SelectItem>
-                      <SelectItem value="GENERAL_REQUEST">Genel Talep</SelectItem>
+                      <SelectItem value="TECHNICAL">Teknik Destek</SelectItem>
+                      <SelectItem value="POLICY_APPROVAL">Poliçe Onay & İşlem</SelectItem>
+                      <SelectItem value="FINANCE">Finans & Komisyon</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -104,9 +94,7 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Konu Başlığı</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Örn: 2026-POL-449 komisyon düzeltmesi" {...field} />
-                  </FormControl>
+                  <FormControl><Input placeholder="Örn: 2026-POL-449 komisyon düzeltmesi" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -132,9 +120,7 @@ export function CreateTicketDialog({ open, onOpenChange }: CreateTicketDialogPro
             />
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                İptal
-              </Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Oluşturuluyor...' : 'Talebi İlet'}
               </Button>

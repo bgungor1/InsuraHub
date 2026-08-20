@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import type { ColDef } from 'ag-grid-community';
+import { ColDef, ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 import { useCommissionRulesQuery } from '../hooks/use-commissions-query';
 import type { CommissionRule } from '../types/commission.types';
 
@@ -54,7 +56,8 @@ export function RulesTable() {
         flex: 1,
         minWidth: 100,
         cellRenderer: (params: { data?: CommissionRule }) => {
-          const isActive = !params.data?.validUntil;
+          const validUntil = params.data?.validUntil;
+          const isActive = !validUntil || new Date(validUntil).getTime() > Date.now();
           return (
             <Badge variant={isActive ? 'default' : 'outline'}>
               {isActive ? 'Aktif' : 'Arşiv'}

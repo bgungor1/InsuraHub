@@ -8,3 +8,9 @@ export const policiesSocket = io(`${API_ORIGIN}/policies`, {
   withCredentials: true,
   transports: ['websocket', 'polling'],
 });
+
+export const notificationsSocket = io(`${API_ORIGIN}/notifications`, {
+  autoConnect: false,
+  withCredentials: true,
+  transports: ['websocket', 'polling'],
+});

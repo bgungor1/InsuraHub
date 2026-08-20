@@ -15,6 +15,7 @@ import { CommissionsModule } from './domains/commissions/commissions.module';
 import { DashboardModule } from './domains/dashboard/dashboard.module';
 import { TicketsModule } from './domains/tickets/tickets.module';
 import { AuditLogsModule } from './domains/audit-logs/audit-logs.module';
+import { NotificationsModule } from './domains/notifications/notifications.module';
 
 function validateEnv(config: Record<string, unknown>) {
   if (!config.DATABASE_URL) {
@@ -49,6 +50,7 @@ function validateEnv(config: Record<string, unknown>) {
     CommissionsModule,
     DashboardModule,
     AuditLogsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

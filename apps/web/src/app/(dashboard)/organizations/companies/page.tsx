@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Building2, Search, RefreshCw } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,9 +13,17 @@ import {
 } from '@/features/companies';
 
 export default function CompaniesPage() {
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
+
+  React.useEffect(() => {
+    if (user && user.role !== 'SUPERADMIN') {
+      router.replace('/organizations');
+    }
+  }, [user, router]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,6 +36,10 @@ export default function CompaniesPage() {
     search: debouncedSearch || undefined,
     limit: 50,
   });
+
+  if (user?.role !== 'SUPERADMIN') {
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] space-y-4">

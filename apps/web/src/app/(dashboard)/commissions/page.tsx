@@ -6,6 +6,7 @@ import { Calculator, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryKeys } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   CreateRuleDialog,
   RulesTable,
@@ -14,7 +15,10 @@ import {
 
 export default function CommissionsPage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+
+  const isAdminOrCompany = user?.role === 'SUPERADMIN' || user?.role === 'COMPANY_USER';
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.commissions.all });
@@ -28,9 +32,13 @@ export default function CommissionsPage() {
             <Calculator className="size-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Komisyon Motoru</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {isAdminOrCompany ? 'Komisyon Motoru & Kuralları' : 'Komisyon & Hakediş Dökümü'}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Dağıtım kurallarını yönetin ve tamamlanan poliçelerin finansal dökümlerini inceleyin.
+              {isAdminOrCompany
+                ? 'Dağıtım kurallarını yönetin ve tamamlanan poliçelerin finansal dökümlerini inceleyin.'
+                : 'Poliçe üretimlerinizden hak ettiğiniz komisyon dökümlerini ve hakedişlerinizi inceleyin.'}
             </p>
           </div>
         </div>
@@ -39,29 +47,39 @@ export default function CommissionsPage() {
           <Button variant="outline" size="icon" onClick={handleRefresh} title="Yenile">
             <RefreshCw className="size-4" />
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            Yeni Kural Ekle
-          </Button>
+          {isAdminOrCompany && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              Yeni Kural Ekle
+            </Button>
+          )}
         </div>
       </div>
 
-      <Tabs defaultValue="snapshots" className="flex-1 flex flex-col space-y-4">
-        <TabsList className="grid w-[400px] grid-cols-2">
-          <TabsTrigger value="snapshots">Dekontlar / Dağılımlar</TabsTrigger>
-          <TabsTrigger value="rules">Komisyon Kuralları</TabsTrigger>
-        </TabsList>
+      {isAdminOrCompany ? (
+        <Tabs defaultValue="snapshots" className="flex-1 flex flex-col space-y-4">
+          <TabsList className="grid w-[400px] grid-cols-2">
+            <TabsTrigger value="snapshots">Dekontlar / Dağılımlar</TabsTrigger>
+            <TabsTrigger value="rules">Komisyon Kuralları</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="snapshots" className="flex-1 m-0">
+          <TabsContent value="snapshots" className="flex-1 m-0">
+            <SnapshotsTable />
+          </TabsContent>
+
+          <TabsContent value="rules" className="flex-1 m-0">
+            <RulesTable />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="flex-1">
           <SnapshotsTable />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="rules" className="flex-1 m-0">
-          <RulesTable />
-        </TabsContent>
-      </Tabs>
-
-      <CreateRuleDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      {isAdminOrCompany && (
+        <CreateRuleDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      )}
     </div>
   );
 }

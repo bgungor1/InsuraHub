@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Plus, GitBranch, Search, RefreshCw } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/features/branches';
 
 export default function BranchesPage() {
+  const user = useAuthStore((state) => state.user);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
@@ -26,6 +28,11 @@ export default function BranchesPage() {
     search: debouncedSearch || undefined,
     limit: 50,
   });
+
+  const canCreateBranch =
+    user?.role === 'SUPERADMIN' ||
+    user?.role === 'COMPANY_USER' ||
+    user?.role === 'AGENCY_MANAGER';
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] space-y-4">
@@ -63,10 +70,12 @@ export default function BranchesPage() {
             <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
           </Button>
 
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            <span>Yeni Şube</span>
-          </Button>
+          {canCreateBranch && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              <span>Yeni Şube</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -79,7 +88,11 @@ export default function BranchesPage() {
         />
       </div>
 
-      <CreateBranchDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      <CreateBranchDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        defaultAgencyId={user?.agencyId || undefined}
+      />
     </div>
   );
 }

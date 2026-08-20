@@ -58,7 +58,7 @@ export class AuditLogsService {
       };
     }
 
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where,
         skip,
@@ -67,6 +67,25 @@ export class AuditLogsService {
       }),
       this.prisma.auditLog.count({ where }),
     ]);
+
+    const actorIds = Array.from(new Set(rawItems.map((item) => item.actorId)));
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: actorIds } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const items = rawItems.map((item) => ({
+      ...item,
+      actor: userMap.get(item.actorId) || null,
+    }));
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;

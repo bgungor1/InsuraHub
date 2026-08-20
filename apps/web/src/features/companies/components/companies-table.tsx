@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { ColDef, ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
-import { Building2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Company } from '../types/company.types';
+import { useUpdateCompanyMutation } from '../hooks/use-update-company-mutation';
+import { getCompanyColumnDefs } from './company-columns';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -17,61 +17,27 @@ interface CompaniesTableProps {
   onRetry: () => void;
 }
 
-export function CompaniesTable({ data, isLoading, isError, onRetry }: CompaniesTableProps) {
+export function CompaniesTable({
+  data,
+  isLoading,
+  isError,
+  onRetry,
+}: CompaniesTableProps) {
+  const updateMutation = useUpdateCompanyMutation();
+
+  const handleToggleActive = React.useCallback(
+    (company: Company) => {
+      updateMutation.mutate({
+        id: company.id,
+        data: { isActive: !(company.isActive !== false) },
+      });
+    },
+    [updateMutation],
+  );
+
   const columnDefs = React.useMemo<ColDef<Company>[]>(
-    () => [
-      {
-        field: 'name',
-        headerName: 'Şirket Adı',
-        flex: 2,
-        minWidth: 200,
-        cellRenderer: (params: { value: string }) => (
-          <div className="flex items-center gap-2 font-medium text-foreground">
-            <Building2 className="size-4 text-primary shrink-0" />
-            <span>{params.value}</span>
-          </div>
-        ),
-      },
-      {
-        field: 'taxNumber',
-        headerName: 'Vergi Numarası',
-        flex: 1,
-        minWidth: 140,
-        valueFormatter: (params) => params.value || '-',
-      },
-      {
-        headerName: 'Acente Sayısı',
-        flex: 1,
-        minWidth: 120,
-        valueGetter: (params) => params.data?._count?.agencies ?? 0,
-      },
-      {
-        headerName: 'Kullanıcı Sayısı',
-        flex: 1,
-        minWidth: 120,
-        valueGetter: (params) => params.data?._count?.users ?? 0,
-      },
-      {
-        field: 'isActive',
-        headerName: 'Durum',
-        flex: 1,
-        minWidth: 110,
-        cellRenderer: (params: { value: boolean }) => (
-          <Badge variant={params.value ? 'default' : 'destructive'} className="text-[11px]">
-            {params.value ? 'Aktif' : 'Pasif'}
-          </Badge>
-        ),
-      },
-      {
-        field: 'createdAt',
-        headerName: 'Kayıt Tarihi',
-        flex: 1,
-        minWidth: 130,
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString('tr-TR') : '-',
-      },
-    ],
-    []
+    () => getCompanyColumnDefs(handleToggleActive, updateMutation.isPending),
+    [handleToggleActive, updateMutation.isPending],
   );
 
   const defaultColDef = React.useMemo<ColDef>(
@@ -80,7 +46,7 @@ export function CompaniesTable({ data, isLoading, isError, onRetry }: CompaniesT
       filter: true,
       resizable: true,
     }),
-    []
+    [],
   );
 
   if (isLoading) {
@@ -95,7 +61,9 @@ export function CompaniesTable({ data, isLoading, isError, onRetry }: CompaniesT
   if (isError) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 text-destructive">
-        <p className="text-sm font-medium">Şirketler yüklenirken bir hata oluştu.</p>
+        <p className="text-sm font-medium">
+          Şirketler yüklenirken bir hata oluştu.
+        </p>
         <Button variant="outline" size="sm" onClick={onRetry}>
           Tekrar Dene
         </Button>

@@ -1,8 +1,4 @@
-export type TicketCategory =
-  | 'POLICY_ISSUE'
-  | 'COMMISSION_INQUIRY'
-  | 'TECHNICAL_SUPPORT'
-  | 'GENERAL_REQUEST';
+export type TicketCategory = 'TECHNICAL' | 'POLICY_APPROVAL' | 'FINANCE';
 
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 

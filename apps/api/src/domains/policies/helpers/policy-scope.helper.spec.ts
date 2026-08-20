@@ -1,10 +1,10 @@
 import { ForbiddenException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PolicyScopeHelper } from './policy-scope.helper';
 
 describe('PolicyScopeHelper (RBAC & Multi-Tenant Scoping)', () => {
   it('should allow SUPERADMIN unrestricted access', () => {
-    const where: any = {};
+    const where: Prisma.PolicyWhereInput = {};
     PolicyScopeHelper.applyOrganizationalScope(where, {
       userId: 'admin_1',
       role: UserRole.SUPERADMIN,
@@ -15,7 +15,7 @@ describe('PolicyScopeHelper (RBAC & Multi-Tenant Scoping)', () => {
   });
 
   it('should scope AGENCY_MANAGER queries to the agency branches', () => {
-    const where: any = {};
+    const where: Prisma.PolicyWhereInput = {};
     PolicyScopeHelper.applyOrganizationalScope(where, {
       userId: 'agency_mgr',
       role: UserRole.AGENCY_MANAGER,
@@ -27,7 +27,7 @@ describe('PolicyScopeHelper (RBAC & Multi-Tenant Scoping)', () => {
   });
 
   it('should scope BRANCH_MANAGER and BROKER queries to their branchId', () => {
-    const where: any = {};
+    const where: Prisma.PolicyWhereInput = {};
     PolicyScopeHelper.applyOrganizationalScope(where, {
       userId: 'broker_1',
       role: UserRole.BROKER,
@@ -36,6 +36,18 @@ describe('PolicyScopeHelper (RBAC & Multi-Tenant Scoping)', () => {
     });
 
     expect(where.branchId).toBe('branch_789');
+  });
+
+  it('should resolve selected branchId for AGENCY_MANAGER', () => {
+    const user = {
+      userId: 'agency_mgr',
+      role: UserRole.AGENCY_MANAGER,
+      agencyId: 'agency_123',
+      email: 'agency@insurahub.com',
+    };
+
+    const resolved = PolicyScopeHelper.resolveBranchId('branch_selected', user);
+    expect(resolved).toBe('branch_selected');
   });
 
   it('should throw ForbiddenException if broker attempts to access a policy from a different branch', () => {

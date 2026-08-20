@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Shield } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,31 +12,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { useCustomersQuery } from '@/features/customers';
-import { useBranchesQuery } from '@/features/branches';
 import { useCreatePolicyMutation } from '../hooks/use-create-policy-mutation';
 import {
-  PRODUCT_OPTIONS,
   createPolicySchema,
   type CreatePolicyFormValues,
 } from '../schemas/policy.schema';
+import type { PolicyState } from '../types/policy.types';
+import { PolicyCustomerSection } from './policy-customer-section';
+import { PolicyProductSection } from './policy-product-section';
+import { PolicyPricingSection } from './policy-pricing-section';
 
 interface CreatePolicyDialogProps {
   open: boolean;
@@ -43,12 +30,28 @@ interface CreatePolicyDialogProps {
 }
 
 export function CreatePolicyDialog({ open, onOpenChange }: CreatePolicyDialogProps) {
-  const { data: customersData, isLoading: isLoadingCustomers } = useCustomersQuery({ limit: 100 });
-  const { data: branchesData, isLoading: isLoadingBranches } = useBranchesQuery({ limit: 100 });
-
   const form = useForm<CreatePolicyFormValues>({
     resolver: zodResolver(createPolicySchema),
-    defaultValues: { product: 'KASKO', customerId: '', branchId: '', totalAmount: 0, state: 'UNASSIGNED' },
+    defaultValues: {
+      customerMode: 'EXISTING',
+      customerId: '',
+      newCustomer: {
+        firstName: '',
+        lastName: '',
+        identityNo: '',
+        phone: '',
+        city: 'İstanbul',
+      },
+      product: 'KASKO',
+      branchId: '',
+      brokerId: '',
+      coverageAmount: 1250000,
+      totalAmount: 14500,
+      plateNumber: '',
+      uavtCode: '',
+      paymentTerm: 'CASH',
+      state: 'UNASSIGNED',
+    },
   });
 
   const createMutation = useCreatePolicyMutation({
@@ -59,83 +62,69 @@ export function CreatePolicyDialog({ open, onOpenChange }: CreatePolicyDialogPro
   });
 
   const onSubmit = (values: CreatePolicyFormValues) => {
-    createMutation.mutate({
-      ...values,
+    const brokerId =
+      values.brokerId && values.brokerId.trim().length > 0
+        ? values.brokerId
+        : undefined;
+    const state: PolicyState = brokerId ? 'CLAIMED' : 'UNASSIGNED';
+
+    const payload = {
+      product: values.product,
+      state,
+      brokerId,
       branchId: values.branchId || undefined,
       totalAmount: Number(values.totalAmount) || undefined,
-    });
+      coverageAmount: Number(values.coverageAmount) || undefined,
+      plateNumber: values.plateNumber || undefined,
+      uavtCode: values.uavtCode || undefined,
+      paymentTerm: values.paymentTerm || undefined,
+      ...(values.customerMode === 'EXISTING'
+        ? { customerId: values.customerId }
+        : {
+            newCustomer: {
+              firstName: values.newCustomer?.firstName?.trim() || '',
+              lastName: values.newCustomer?.lastName?.trim() || '',
+              identityNo: values.newCustomer?.identityNo?.trim() || '',
+              phone: values.newCustomer?.phone?.trim() || undefined,
+              city: values.newCustomer?.city?.trim() || undefined,
+            },
+          }),
+    };
+
+    createMutation.mutate(payload);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[560px] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Yeni Poliçe Kaydı</DialogTitle>
-          <DialogDescription>Havuzda işlem görecek veya doğrudan atanacak yeni bir poliçe oluşturun.</DialogDescription>
+          <div className="flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Shield className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg">Yeni Poliçe & Teklif Kaydı</DialogTitle>
+              <DialogDescription className="text-xs">
+                Müşteri bilgilerini girin, branş seçin ve doğrudan bir temsilciye atayın ya da havuza bırakın.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-            <FormField control={form.control} name="product" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Poliçe Ürün Türü *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Ürün seçin" /></SelectTrigger></FormControl>
-                  <SelectContent>{PRODUCT_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-1">
+            <PolicyCustomerSection form={form} />
+            <PolicyProductSection form={form} />
+            <PolicyPricingSection form={form} />
 
-            <FormField control={form.control} name="customerId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Müşteri *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger disabled={isLoadingCustomers}><SelectValue placeholder={isLoadingCustomers ? 'Yükleniyor...' : 'Müşteri seçin'} /></SelectTrigger></FormControl>
-                  <SelectContent>{customersData?.items?.map((c) => <SelectItem key={c.id} value={c.id}>{c.firstName} {c.lastName} ({c.identityNo})</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <FormField control={form.control} name="branchId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Şube</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger disabled={isLoadingBranches}><SelectValue placeholder={isLoadingBranches ? 'Yükleniyor...' : 'Şube seçin (Opsiyonel)'} /></SelectTrigger></FormControl>
-                  <SelectContent>{branchesData?.items?.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <div className="grid grid-cols-2 gap-3">
-              <FormField control={form.control} name="totalAmount" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prim Tutarı (₺)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" placeholder="0.00" value={field.value ?? ''} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="state" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Başlangıç Durumu</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="UNASSIGNED">Havuzda (Bekliyor)</SelectItem>
-                      <SelectItem value="CLAIMED">Üzerime Al (İşlemde)</SelectItem>
-                      <SelectItem value="DRAFT">Taslak</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-              <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? 'Kaydediliyor...' : 'Poliçe Oluştur'}</Button>
+            <DialogFooter className="pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                Vazgeç
+              </Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending} className="gap-1.5">
+                <Shield className="size-3.5" />
+                {createMutation.isPending ? 'Oluşturuluyor...' : 'Poliçeyi Kaydet ve Gönder'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

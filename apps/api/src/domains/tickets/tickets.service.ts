@@ -7,10 +7,15 @@ import { Prisma, TicketStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../../auth/decorators';
 import { AddTicketMessageDto, CreateTicketDto, QueryTicketDto } from './dto';
+import { TicketScopeHelper } from './helpers/ticket-scope.helper';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TicketsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(dto: CreateTicketDto, user: AuthenticatedUser) {
     return this.prisma.ticket.create({
@@ -51,12 +56,12 @@ export class TicketsService {
     const { skip, take, category, status, startDate, endDate } = query;
     const where: Prisma.TicketWhereInput = {};
 
-    if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
-      where.creator = { branch: { agencyId: user.agencyId } };
-    } else if (user.role === UserRole.BRANCH_MANAGER && user.branchId) {
-      where.creator = { branchId: user.branchId };
-    } else if (user.role === UserRole.BROKER) {
-      where.creatorId = user.userId;
+    const scopedUserIds = await TicketScopeHelper.getScopedUserIds(
+      this.prisma,
+      user,
+    );
+    if (scopedUserIds) {
+      where.creatorId = { in: scopedUserIds };
     }
 
     if (category) where.category = category;
@@ -109,6 +114,7 @@ export class TicketsService {
       include: {
         creator: {
           include: {
+            agency: true,
             branch: { include: { agency: true } },
           },
         },
@@ -127,7 +133,7 @@ export class TicketsService {
       throw new NotFoundException('Destek talebi bulunamadı.');
     }
 
-    this.checkTicketAccess(ticket, user);
+    TicketScopeHelper.checkTicketAccess(ticket, user);
     return ticket;
   }
 
@@ -166,6 +172,15 @@ export class TicketsService {
         : Promise.resolve(),
     ]);
 
+    if (ticket.creatorId && ticket.creatorId !== user.userId) {
+      await this.notificationsService.create({
+        userId: ticket.creatorId,
+        type: 'TICKET_MESSAGE',
+        title: 'Destek Talebinize Yanıt Verildi',
+        message: `"${ticket.subject}" başlıklı talebinize yeni bir yanıt eklendi.`,
+      });
+    }
+
     return message;
   }
 
@@ -179,7 +194,7 @@ export class TicketsService {
     const isResolving =
       status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED;
 
-    return this.prisma.ticket.update({
+    const updated = await this.prisma.ticket.update({
       where: { id: ticket.id },
       data: {
         status,
@@ -187,47 +202,23 @@ export class TicketsService {
         ...(!isResolving && { resolvedAt: null }),
       },
     });
-  }
 
-  private checkTicketAccess(
-    ticket: {
-      creatorId: string;
-      creator: {
-        branchId?: string | null;
-        branch?: { agencyId?: string | null } | null;
-      };
-    },
-    user: AuthenticatedUser,
-  ) {
-    if (
-      user.role === UserRole.SUPERADMIN ||
-      user.role === UserRole.COMPANY_USER
-    ) {
-      return;
+    if (ticket.creatorId && ticket.creatorId !== user.userId) {
+      const statusLabel =
+        status === TicketStatus.RESOLVED
+          ? 'Çözüldü'
+          : status === TicketStatus.CLOSED
+            ? 'Kapatıldı'
+            : 'İşleme Alındı';
+
+      await this.notificationsService.create({
+        userId: ticket.creatorId,
+        type: 'TICKET_STATUS',
+        title: 'Destek Talebinizin Durumu Güncellendi',
+        message: `"${ticket.subject}" başlıklı talebiniz "${statusLabel}" durumuna getirildi.`,
+      });
     }
 
-    if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
-      if (ticket.creator.branch?.agencyId !== user.agencyId) {
-        throw new ConflictException(
-          'Bu destek talebini görüntüleme yetkiniz yok.',
-        );
-      }
-      return;
-    }
-
-    if (user.role === UserRole.BRANCH_MANAGER && user.branchId) {
-      if (ticket.creator.branchId !== user.branchId) {
-        throw new ConflictException(
-          'Bu destek talebini görüntüleme yetkiniz yok.',
-        );
-      }
-      return;
-    }
-
-    if (user.role === UserRole.BROKER && ticket.creatorId !== user.userId) {
-      throw new ConflictException(
-        'Bu destek talebini görüntüleme yetkiniz yok.',
-      );
-    }
+    return updated;
   }
 }

@@ -1,14 +1,14 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PolicyState, UserRole } from '@prisma/client';
+import { PolicyState, Prisma, UserRole } from '@prisma/client';
 import { PoliciesService } from './policies.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PoliciesGateway } from './policies.gateway';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('PoliciesService (State Machine & Concurrency)', () => {
   let service: PoliciesService;
-  let prisma: any;
-  let gateway: any;
 
   const mockBrokerUser = {
     userId: 'broker_123',
@@ -24,26 +24,36 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
     email: 'other@insurahub.com',
   };
 
-  beforeEach(async () => {
-    prisma = {
-      policy: {
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-        count: jest.fn(),
-      },
-      customer: { findUnique: jest.fn() },
-      branch: { findUnique: jest.fn() },
-      commissionRule: { findFirst: jest.fn() },
-      commissionSnapshot: { create: jest.fn(), upsert: jest.fn() },
-      policyAssignment: { upsert: jest.fn(), updateMany: jest.fn() },
-      $transaction: jest.fn((callback: (tx: any) => any) =>
+  const mockPrisma = {
+    policy: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn(),
+    },
+    customer: { findUnique: jest.fn() },
+    branch: { findUnique: jest.fn() },
+    user: { findMany: jest.fn().mockResolvedValue([{ id: 'broker_123' }]) },
+    commissionRule: { findFirst: jest.fn() },
+    commissionSnapshot: { create: jest.fn(), upsert: jest.fn() },
+    policyAssignment: {
+      upsert: jest.fn(),
+      updateMany: jest.fn(),
+      create: jest.fn(),
+    },
+    $transaction: jest.fn(
+      (callback: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
         callback({
           policy: {
             update: jest
               .fn()
-              .mockImplementation(({ data }) => ({ id: 'pol_1', ...data })),
+              .mockImplementation(
+                ({ data }: { data: Record<string, unknown> }) => ({
+                  id: 'pol_1',
+                  ...data,
+                }),
+              ),
           },
           commissionSnapshot: {
             create: jest
@@ -54,27 +64,46 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
               .mockResolvedValue({ id: 'snap_1', totalAmount: 5000 }),
           },
           policyAssignment: { upsert: jest.fn(), updateMany: jest.fn() },
-        }),
-      ),
-    };
+        } as unknown as Prisma.TransactionClient),
+    ),
+  };
 
-    gateway = {
-      broadcastPolicyCreated: jest.fn(),
-      broadcastPolicyClaimed: jest.fn(),
-      broadcastPolicyReleased: jest.fn(),
-      broadcastPolicyCompleted: jest.fn(),
-    };
+  const mockGateway = {
+    broadcastPolicyCreated: jest.fn(),
+    broadcastPolicyClaimed: jest.fn(),
+    broadcastPolicyReleased: jest.fn(),
+    broadcastPolicyCompleted: jest.fn(),
+  };
+
+  const mockAuditLogsService = {
+    logAction: jest.fn().mockResolvedValue({ id: 'log1' }),
+  };
+
+  const mockNotificationsService = {
+    create: jest.fn().mockResolvedValue({ id: 'notif_1' }),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PoliciesService,
         {
           provide: PrismaService,
-          useValue: prisma,
+          useValue: mockPrisma,
         },
         {
           provide: PoliciesGateway,
-          useValue: gateway,
+          useValue: mockGateway,
+        },
+        {
+          provide: AuditLogsService,
+          useValue: mockAuditLogsService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();
@@ -84,7 +113,7 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
 
   describe('Claim Policy (Concurrency & Race Condition)', () => {
     it('should successfully claim an UNASSIGNED policy and broadcast event', async () => {
-      prisma.policy.findUnique.mockResolvedValue({
+      mockPrisma.policy.findUnique.mockResolvedValue({
         id: 'pol_1',
         branchId: 'branch_abc',
         state: PolicyState.UNASSIGNED,
@@ -94,32 +123,34 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
       const result = await service.claim('pol_1', mockBrokerUser);
 
       expect(result).toBeDefined();
-      expect(gateway.broadcastPolicyClaimed).toHaveBeenCalledWith(
+      expect(mockGateway.broadcastPolicyClaimed).toHaveBeenCalledWith(
         'pol_1',
         mockBrokerUser.userId,
+      );
+      expect(mockAuditLogsService.logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'CLAIM_POLICY' }),
       );
     });
 
     it('should reject claim attempt with ConflictException if policy is already claimed by another broker (Race condition prevention)', async () => {
-      prisma.policy.findUnique.mockResolvedValue({
+      mockPrisma.policy.findUnique.mockResolvedValue({
         id: 'pol_1',
         branchId: 'branch_abc',
         state: PolicyState.CLAIMED,
         brokerId: mockOtherBrokerUser.userId,
       });
 
-      // Broker B tries to claim simultaneously:
       await expect(service.claim('pol_1', mockBrokerUser)).rejects.toThrow(
         ConflictException,
       );
 
-      expect(gateway.broadcastPolicyClaimed).not.toHaveBeenCalled();
+      expect(mockGateway.broadcastPolicyClaimed).not.toHaveBeenCalled();
     });
   });
 
   describe('Release Policy', () => {
     it('should allow the owner broker to release policy back to UNASSIGNED and broadcast', async () => {
-      prisma.policy.findUnique.mockResolvedValue({
+      mockPrisma.policy.findUnique.mockResolvedValue({
         id: 'pol_1',
         branchId: 'branch_abc',
         state: PolicyState.CLAIMED,
@@ -133,11 +164,14 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
       );
 
       expect(result).toBeDefined();
-      expect(gateway.broadcastPolicyReleased).toHaveBeenCalledWith('pol_1');
+      expect(mockGateway.broadcastPolicyReleased).toHaveBeenCalledWith('pol_1');
+      expect(mockAuditLogsService.logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'RELEASE_POLICY' }),
+      );
     });
 
     it('should prevent non-owner broker from releasing another broker’s claimed policy', async () => {
-      prisma.policy.findUnique.mockResolvedValue({
+      mockPrisma.policy.findUnique.mockResolvedValue({
         id: 'pol_1',
         branchId: 'branch_abc',
         state: PolicyState.CLAIMED,
@@ -152,14 +186,14 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
 
   describe('Complete Policy (FSM Lifecycle)', () => {
     it('should complete claimed policy, calculate commission snapshot, and broadcast', async () => {
-      prisma.policy.findUnique.mockResolvedValue({
+      mockPrisma.policy.findUnique.mockResolvedValue({
         id: 'pol_1',
         branchId: 'branch_abc',
         state: PolicyState.CLAIMED,
         brokerId: mockBrokerUser.userId,
       });
 
-      prisma.commissionRule.findFirst.mockResolvedValue({
+      mockPrisma.commissionRule.findFirst.mockResolvedValue({
         id: 'rule_1',
         companyShare: 40,
         agencyShare: 30,
@@ -174,7 +208,12 @@ describe('PoliciesService (State Machine & Concurrency)', () => {
       );
 
       expect(result).toBeDefined();
-      expect(gateway.broadcastPolicyCompleted).toHaveBeenCalledWith('pol_1');
+      expect(mockGateway.broadcastPolicyCompleted).toHaveBeenCalledWith(
+        'pol_1',
+      );
+      expect(mockAuditLogsService.logAction).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'COMPLETE_POLICY' }),
+      );
     });
   });
 });

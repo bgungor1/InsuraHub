@@ -1,10 +1,12 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { AuthenticatedUser } from '../../auth/decorators';
 import { CreateCompanyDto, QueryCompanyDto, UpdateCompanyDto } from './dto';
 
 @Injectable()
@@ -35,10 +37,14 @@ export class CompaniesService {
     });
   }
 
-  async findAll(query: QueryCompanyDto) {
+  async findAll(query: QueryCompanyDto, user?: AuthenticatedUser) {
     const { skip, take, search, isActive } = query;
 
     const where: Prisma.CompanyWhereInput = {};
+
+    if (user && user.role !== UserRole.SUPERADMIN) {
+      where.id = user.companyId ?? undefined;
+    }
 
     if (typeof isActive === 'boolean') {
       where.isActive = isActive;
@@ -78,7 +84,11 @@ export class CompaniesService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user?: AuthenticatedUser) {
+    if (user && user.role !== UserRole.SUPERADMIN && user.companyId !== id) {
+      throw new ForbiddenException('Bu şirkete erişim yetkiniz yok.');
+    }
+
     const company = await this.prisma.company.findUnique({
       where: { id },
       include: {
@@ -103,8 +113,12 @@ export class CompaniesService {
     return company;
   }
 
-  async update(id: string, updateCompanyDto: UpdateCompanyDto) {
-    await this.findOne(id);
+  async update(
+    id: string,
+    updateCompanyDto: UpdateCompanyDto,
+    user?: AuthenticatedUser,
+  ) {
+    await this.findOne(id, user);
 
     if (updateCompanyDto.name) {
       const existingName = await this.prisma.company.findFirst({
@@ -132,8 +146,8 @@ export class CompaniesService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, user?: AuthenticatedUser) {
+    await this.findOne(id, user);
 
     return this.prisma.company.update({
       where: { id },

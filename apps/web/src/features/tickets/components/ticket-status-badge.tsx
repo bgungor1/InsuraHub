@@ -3,10 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import type { TicketCategory, TicketStatus } from '../types/tickets.types';
 
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
-  POLICY_ISSUE: 'Poliçe İşlemi',
-  COMMISSION_INQUIRY: 'Komisyon Sorusu',
-  TECHNICAL_SUPPORT: 'Teknik Destek',
-  GENERAL_REQUEST: 'Genel Talep',
+  TECHNICAL: 'Teknik Destek',
+  POLICY_APPROVAL: 'Poliçe Onayı / İşlemi',
+  FINANCE: 'Finans & Komisyon',
 };
 
 const STATUS_CONFIG: Record<

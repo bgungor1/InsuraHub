@@ -36,6 +36,7 @@ export class BranchesController {
     UserRole.COMPANY_USER,
     UserRole.AGENCY_MANAGER,
     UserRole.BRANCH_MANAGER,
+    UserRole.BROKER,
   )
   findAll(
     @Query() query: QueryBranchDto,
@@ -50,6 +51,7 @@ export class BranchesController {
     UserRole.COMPANY_USER,
     UserRole.AGENCY_MANAGER,
     UserRole.BRANCH_MANAGER,
+    UserRole.BROKER,
   )
   findOne(
     @Param('id') id: string,

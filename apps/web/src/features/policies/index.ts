@@ -6,4 +6,6 @@ export * from './hooks/use-create-policy-mutation';
 export * from './hooks/use-policy-actions-mutations';
 export * from './hooks/use-policies-realtime';
 export * from './components/create-policy-dialog';
+export * from './components/complete-policy-dialog';
+export * from './components/policy-detail-dialog';
 export * from './components/policies-table';

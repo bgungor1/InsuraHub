@@ -22,13 +22,13 @@ describe('Ticket Badges Components', () => {
     expect(screen.getByText('İşlemde')).toBeInTheDocument();
   });
 
-  it('should render correct Turkish label for POLICY_ISSUE category', () => {
-    render(<TicketCategoryBadge category="POLICY_ISSUE" />);
-    expect(screen.getByText('Poliçe İşlemi')).toBeInTheDocument();
+  it('should render correct Turkish label for POLICY_APPROVAL category', () => {
+    render(<TicketCategoryBadge category="POLICY_APPROVAL" />);
+    expect(screen.getByText('Poliçe Onayı / İşlemi')).toBeInTheDocument();
   });
 
-  it('should render correct Turkish label for COMMISSION_INQUIRY category', () => {
-    render(<TicketCategoryBadge category="COMMISSION_INQUIRY" />);
-    expect(screen.getByText('Komisyon Sorusu')).toBeInTheDocument();
+  it('should render correct Turkish label for TECHNICAL category', () => {
+    render(<TicketCategoryBadge category="TECHNICAL" />);
+    expect(screen.getByText('Teknik Destek')).toBeInTheDocument();
   });
 });

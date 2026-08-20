@@ -40,7 +40,13 @@ export class CommissionsController {
   }
 
   @Get('rules')
-  @Roles(UserRole.SUPERADMIN, UserRole.COMPANY_USER)
+  @Roles(
+    UserRole.SUPERADMIN,
+    UserRole.COMPANY_USER,
+    UserRole.AGENCY_MANAGER,
+    UserRole.BRANCH_MANAGER,
+    UserRole.BROKER,
+  )
   async getAllRules() {
     const data = await this.commissionsService.getAllRules();
     return { data };

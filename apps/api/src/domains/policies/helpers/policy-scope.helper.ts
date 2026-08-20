@@ -9,12 +9,14 @@ export class PolicyScopeHelper {
   ): string {
     if (
       user.role === UserRole.SUPERADMIN ||
-      user.role === UserRole.COMPANY_USER
+      user.role === UserRole.COMPANY_USER ||
+      user.role === UserRole.AGENCY_MANAGER
     ) {
       if (!branchId) throw new ConflictException('Şube seçimi zorunludur.');
       return branchId;
     }
     if (user.branchId) return user.branchId;
+    if (branchId) return branchId;
     throw new ForbiddenException(
       'Kullanıcının bağlı olduğu bir şube bulunmamaktadır.',
     );

@@ -38,6 +38,7 @@ export interface UsersQueryParams {
   companyId?: string;
   agencyId?: string;
   branchId?: string;
+  isActive?: boolean;
 }
 
 export interface CreateUserInput {
