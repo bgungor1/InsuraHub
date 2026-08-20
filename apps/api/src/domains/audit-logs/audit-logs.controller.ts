@@ -3,7 +3,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../../auth/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../auth/guards';
 import { AuditLogsService } from './audit-logs.service';
-import { QueryAuditLogDto } from './dto/query-audit-log.dto';
+import { QueryAuditLogDto } from './dto';
 
 @Controller('audit-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
