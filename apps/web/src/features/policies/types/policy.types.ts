@@ -13,6 +13,11 @@ export interface Policy {
   branchId: string;
   brokerId?: string | null;
   previousPolicyId?: string | null;
+  totalAmount?: number | null;
+  coverageAmount?: number | null;
+  plateNumber?: string | null;
+  uavtCode?: string | null;
+  paymentTerm?: string | null;
   createdAt: string;
   updatedAt?: string;
   customer?: {
@@ -21,6 +26,13 @@ export interface Policy {
     lastName: string;
     identityNo?: string;
     type?: string;
+    contactInfo?: {
+      phone?: string;
+      email?: string;
+      city?: string;
+      district?: string;
+      address?: string;
+    };
   };
   branch?: {
     id: string;
@@ -69,10 +81,24 @@ export interface PoliciesQueryParams {
 
 export interface CreatePolicyInput {
   product: string;
-  customerId: string;
+  customerId?: string;
+  newCustomer?: {
+    firstName: string;
+    lastName: string;
+    identityNo: string;
+    phone?: string;
+    email?: string;
+    city?: string;
+    district?: string;
+    address?: string;
+  };
   branchId?: string;
   brokerId?: string;
   state?: PolicyState;
   totalAmount?: number;
+  coverageAmount?: number;
+  plateNumber?: string;
+  uavtCode?: string;
+  paymentTerm?: string;
   previousPolicyId?: string;
 }

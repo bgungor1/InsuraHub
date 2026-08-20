@@ -8,6 +8,7 @@ export function usePolicyActionsMutations() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.policies.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
   };
 
   const claimMutation = useMutation({

@@ -11,6 +11,7 @@ export function useCreatePolicyMutation(options?: { onSuccess?: () => void }) {
     mutationFn: (input: CreatePolicyInput) => policiesService.createPolicy(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.policies.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
       toast.success('Poliçe kaydı başarıyla oluşturuldu.');
       options?.onSuccess?.();
     },
