@@ -43,7 +43,7 @@ describe('DashboardService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should return summary stats for superadmin', async () => {
+  it('should return summary stats for superadmin with full breakdown', async () => {
     const user = {
       userId: 'user1',
       email: 'admin@insurahub.com',
@@ -53,6 +53,26 @@ describe('DashboardService', () => {
     const stats = await service.getSummaryStats(user);
     expect(stats).toBeDefined();
     expect(stats.financials.totalPremium).toBe(100000);
+    expect(stats.financials.commissions.company).toBe(40000);
+    expect(stats.financials.commissions.agency).toBe(20000);
+    expect(stats.financials.commissions.branch).toBe(20000);
+    expect(stats.financials.commissions.broker).toBe(20000);
     expect(stats.counters.totalCustomers).toBe(50);
+  });
+
+  it('should mask company/agency/branch shares for broker', async () => {
+    const user = {
+      userId: 'broker1',
+      email: 'broker1@insurahub.com',
+      role: UserRole.BROKER,
+      branchId: 'branch1',
+    };
+
+    const stats = await service.getSummaryStats(user);
+    expect(stats).toBeDefined();
+    expect(stats.financials.commissions.company).toBe(0);
+    expect(stats.financials.commissions.agency).toBe(0);
+    expect(stats.financials.commissions.branch).toBe(0);
+    expect(stats.financials.commissions.broker).toBe(20000);
   });
 });

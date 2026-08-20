@@ -6,7 +6,13 @@ import { RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { queryKeys } from '@/lib/api';
 import {
   useDashboardSummaryQuery,
@@ -19,14 +25,24 @@ import {
 export default function DashboardPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const { data: summary, isLoading, isError, refetch } = useDashboardSummaryQuery();
+  const {
+    data: summary,
+    isLoading,
+    isError,
+    refetch,
+  } = useDashboardSummaryQuery();
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
   };
 
   const orgName =
-    user?.branch?.name || user?.agency?.name || user?.company?.name || 'Genel Merkez';
+    user?.branch?.name ||
+    user?.agency?.name ||
+    user?.company?.name ||
+    'Genel Merkez';
+
+  const isBroker = user?.role === 'BROKER';
 
   return (
     <div className="space-y-6">
@@ -36,7 +52,10 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               Hoş Geldiniz, {user?.firstName} {user?.lastName}
             </h2>
-            <Badge variant="secondary" className="font-semibold uppercase tracking-wider text-[10px]">
+            <Badge
+              variant="secondary"
+              className="font-semibold uppercase tracking-wider text-[10px]"
+            >
               {user?.role.replace('_', ' ')}
             </Badge>
           </div>
@@ -45,7 +64,12 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          className="gap-2"
+        >
           <RefreshCw className="size-4" />
           Verileri Yenile
         </Button>
@@ -57,23 +81,30 @@ export default function DashboardPage() {
         </div>
       ) : isError ? (
         <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center">
-          <p className="text-sm font-medium text-destructive">Dashboard verileri alınamadı.</p>
+          <p className="text-sm font-medium text-destructive">
+            Dashboard verileri alınamadı.
+          </p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             Tekrar Dene
           </Button>
         </div>
       ) : summary ? (
         <>
-          {/* Financial KPIs */}
-          <KpiCards financials={summary.financials} />
+          <KpiCards
+            financials={summary.financials}
+            counters={summary.counters}
+          />
 
-          {/* Charts Row */}
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="border-border/60 shadow-xs">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Poliçe Durum Dağılımı</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  Poliçe Durum Dağılımı
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  Sistemdeki poliçelerin yaşam döngüsü dağılımı
+                  {isBroker
+                    ? 'Sorumlu olduğunuz poliçelerin aşama durumu'
+                    : 'Sistemdeki poliçelerin yaşam döngüsü dağılımı'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -83,9 +114,15 @@ export default function DashboardPage() {
 
             <Card className="border-border/60 shadow-xs">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Komisyon Hakediş Dağılımı</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  {isBroker
+                    ? 'Komisyon & Hakediş Analizi'
+                    : 'Komisyon Hakediş Dağılımı'}
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  Kademelere göre dağıtılan komisyon payları
+                  {isBroker
+                    ? 'Üretimlerinizden hak ettiğiniz komisyon payı'
+                    : 'Kademelere göre dağıtılan komisyon payları'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -94,7 +131,6 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Recent Activities */}
           <RecentActivitiesTable activities={summary.recentActivities} />
         </>
       ) : null}

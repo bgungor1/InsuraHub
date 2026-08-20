@@ -62,10 +62,11 @@ export default function TicketsPage() {
 
       {/* Filter Tabs */}
       <Tabs value={activeStatus} onValueChange={setActiveStatus}>
-        <TabsList className="grid w-full grid-cols-4 sm:w-[400px]">
+        <TabsList className="grid w-full grid-cols-5 sm:w-[500px]">
           <TabsTrigger value="ALL">Tümü</TabsTrigger>
           <TabsTrigger value="OPEN">Açık</TabsTrigger>
           <TabsTrigger value="IN_PROGRESS">İşlemde</TabsTrigger>
+          <TabsTrigger value="RESOLVED">Çözüldü</TabsTrigger>
           <TabsTrigger value="CLOSED">Kapatıldı</TabsTrigger>
         </TabsList>
       </Tabs>

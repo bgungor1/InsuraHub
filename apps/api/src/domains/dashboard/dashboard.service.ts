@@ -10,16 +10,34 @@ export class DashboardService {
   async getSummaryStats(user: AuthenticatedUser) {
     const policyWhere: Prisma.PolicyWhereInput = {};
     const snapshotWhere: Prisma.CommissionSnapshotWhereInput = {};
+    const customerWhere: Prisma.CustomerWhereInput = {};
 
-    if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
+    if (user.role === UserRole.COMPANY_USER && user.companyId) {
+      policyWhere.branch = { agency: { companyId: user.companyId } };
+      snapshotWhere.policy = {
+        branch: { agency: { companyId: user.companyId } },
+      };
+      customerWhere.policies = {
+        some: { branch: { agency: { companyId: user.companyId } } },
+      };
+    } else if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
       policyWhere.branch = { agencyId: user.agencyId };
       snapshotWhere.policy = { branch: { agencyId: user.agencyId } };
+      customerWhere.policies = {
+        some: { branch: { agencyId: user.agencyId } },
+      };
     } else if (user.role === UserRole.BRANCH_MANAGER && user.branchId) {
       policyWhere.branchId = user.branchId;
       snapshotWhere.policy = { branchId: user.branchId };
+      customerWhere.policies = {
+        some: { branchId: user.branchId },
+      };
     } else if (user.role === UserRole.BROKER) {
       policyWhere.brokerId = user.userId;
       snapshotWhere.policy = { brokerId: user.userId };
+      customerWhere.policies = {
+        some: { brokerId: user.userId },
+      };
     }
 
     const [
@@ -59,7 +77,7 @@ export class DashboardService {
           brokerAmount: true,
         },
       }),
-      this.prisma.customer.count(),
+      this.prisma.customer.count({ where: customerWhere }),
       this.prisma.commissionSnapshot.findMany({
         where: snapshotWhere,
         take: 5,
@@ -78,6 +96,25 @@ export class DashboardService {
     ]);
 
     const totalPremium = commissionAgg._sum.totalAmount ?? 0;
+    const isSuperAdminOrCompany =
+      user.role === UserRole.SUPERADMIN || user.role === UserRole.COMPANY_USER;
+    const isAgencyMgr = user.role === UserRole.AGENCY_MANAGER;
+    const isBranchMgr = user.role === UserRole.BRANCH_MANAGER;
+
+    const commissions = {
+      company: isSuperAdminOrCompany
+        ? (commissionAgg._sum.companyAmount ?? 0)
+        : 0,
+      agency:
+        isSuperAdminOrCompany || isAgencyMgr
+          ? (commissionAgg._sum.agencyAmount ?? 0)
+          : 0,
+      branch:
+        isSuperAdminOrCompany || isAgencyMgr || isBranchMgr
+          ? (commissionAgg._sum.branchAmount ?? 0)
+          : 0,
+      broker: commissionAgg._sum.brokerAmount ?? 0,
+    };
 
     return {
       policiesByState: [
@@ -107,12 +144,7 @@ export class DashboardService {
       },
       financials: {
         totalPremium,
-        commissions: {
-          company: commissionAgg._sum.companyAmount ?? 0,
-          agency: commissionAgg._sum.agencyAmount ?? 0,
-          branch: commissionAgg._sum.branchAmount ?? 0,
-          broker: commissionAgg._sum.brokerAmount ?? 0,
-        },
+        commissions,
       },
       recentActivities: recentSnapshots.map((s) => ({
         id: s.id,

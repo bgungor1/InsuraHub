@@ -6,7 +6,7 @@ describe('Ticket Schemas Validation', () => {
     it('should validate valid ticket form values', () => {
       const valid = {
         subject: 'Poliçe komisyon düzeltmesi',
-        category: 'POLICY_ISSUE',
+        category: 'POLICY_APPROVAL',
         message: 'Lütfen 2026-POL-101 nolu poliçeyi kontrol eder misiniz?',
       };
 
@@ -17,7 +17,7 @@ describe('Ticket Schemas Validation', () => {
     it('should fail when subject is shorter than 3 characters', () => {
       const invalid = {
         subject: 'Ab',
-        category: 'POLICY_ISSUE',
+        category: 'TECHNICAL',
         message: 'Geçerli bir mesaj gövdesi...',
       };
 
