@@ -7,8 +7,10 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PolicyState } from '@prisma/client';
+import { CreateCustomerDto } from '../../customers/dto/create-customer.dto';
 
 export class CreatePolicyDto {
   @IsString({ message: 'Poliçe ürün türü geçerli bir metin olmalıdır.' })
@@ -20,9 +22,14 @@ export class CreatePolicyDto {
   )
   product: string;
 
+  @IsOptional()
   @IsMongoId({ message: 'Geçerli bir müşteri ID (MongoId) giriniz.' })
-  @IsNotEmpty({ message: 'Müşteri ID zorunludur.' })
-  customerId: string;
+  customerId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCustomerDto)
+  newCustomer?: CreateCustomerDto;
 
   @IsOptional()
   @IsMongoId({ message: 'Geçerli bir şube ID (MongoId) giriniz.' })
@@ -45,4 +52,22 @@ export class CreatePolicyDto {
   @IsNumber({}, { message: 'Prim tutarı sayı olmalıdır.' })
   @Min(0, { message: 'Prim tutarı 0 veya daha büyük olmalıdır.' })
   totalAmount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Teminat tutarı sayı olmalıdır.' })
+  @Min(0, { message: 'Teminat tutarı 0 veya daha büyük olmalıdır.' })
+  coverageAmount?: number;
+
+  @IsOptional()
+  @IsString({ message: 'Plaka geçerli bir metin olmalıdır.' })
+  plateNumber?: string;
+
+  @IsOptional()
+  @IsString({ message: 'UAVT kodu geçerli bir metin olmalıdır.' })
+  uavtCode?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Ödeme planı geçerli bir metin olmalıdır.' })
+  paymentTerm?: string;
 }

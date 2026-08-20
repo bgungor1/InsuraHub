@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PolicyState, Prisma, UserRole } from '@prisma/client';
+import { PolicyState, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../../auth/decorators';
 import {
@@ -15,23 +15,28 @@ import {
   UpdatePolicyDto,
 } from './dto';
 import { PolicyScopeHelper } from './helpers/policy-scope.helper';
-import { CommissionCalculatorHelper } from './helpers/commission-calculator.helper';
+import { PolicyCustomerHelper } from './helpers/policy-customer.helper';
+import { PolicyLifecycleHelper } from './helpers/policy-lifecycle.helper';
+import { PolicyQueryHelper } from './helpers/policy-query.helper';
+import { PolicyNotificationHelper } from './helpers/policy-notification.helper';
 import { PoliciesGateway } from './policies.gateway';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PoliciesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly policiesGateway: PoliciesGateway,
+    private readonly auditLogsService: AuditLogsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreatePolicyDto, user: AuthenticatedUser) {
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: dto.customerId },
-    });
-    if (!customer)
-      throw new NotFoundException('Belirtilen müşteri bulunamadı.');
-
+    const customerId = await PolicyCustomerHelper.resolveCustomerId(
+      this.prisma,
+      dto,
+    );
     const branchId = PolicyScopeHelper.resolveBranchId(dto.branchId, user);
 
     if (dto.previousPolicyId) {
@@ -51,66 +56,55 @@ export class PoliciesService {
       data: {
         product: dto.product,
         state,
-        customerId: dto.customerId,
+        customerId,
         branchId,
         brokerId,
         previousPolicyId: dto.previousPolicyId ?? null,
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            identityNo: true,
-          },
-        },
-        branch: { select: { id: true, name: true } },
-        broker: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
+        plateNumber: dto.plateNumber ?? null,
+        coverageAmount: dto.coverageAmount ?? null,
+        uavtCode: dto.uavtCode ?? null,
+        paymentTerm: dto.paymentTerm ?? null,
+        totalAmount: dto.totalAmount ?? null,
       },
     });
+
+    if (state === PolicyState.CLAIMED && brokerId) {
+      await this.prisma.policyAssignment.create({
+        data: {
+          policyId: policy.id,
+          claimedById: brokerId,
+          assignedAt: new Date(),
+        },
+      });
+    }
+
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'CREATE_POLICY',
+      entityType: 'POLICY',
+      entityId: policy.id,
+      before: null,
+      after: { product: policy.product, state: policy.state, branchId },
+    });
+
+    await PolicyNotificationHelper.notifyOnPolicyCreated(
+      this.prisma,
+      this.notificationsService,
+      policy,
+      user.userId,
+    );
 
     this.policiesGateway.broadcastPolicyCreated({
       policyId: policy.id,
       product: policy.product,
       branchId: policy.branchId,
     });
-
     return policy;
   }
 
   async findAll(query: QueryPolicyDto, user: AuthenticatedUser) {
-    const {
-      skip,
-      take,
-      search,
-      state,
-      customerId,
-      branchId,
-      brokerId,
-      product,
-    } = query;
-    const where: Prisma.PolicyWhereInput = {};
-
-    PolicyScopeHelper.applyOrganizationalScope(where, user);
-
-    if (state) where.state = state;
-    if (customerId) where.customerId = customerId;
-    if (branchId && user.role === UserRole.SUPERADMIN)
-      where.branchId = branchId;
-    if (brokerId) where.brokerId = brokerId;
-    if (product) where.product = { contains: product, mode: 'insensitive' };
-
-    if (search) {
-      where.OR = [
-        { product: { contains: search, mode: 'insensitive' } },
-        { customer: { firstName: { contains: search, mode: 'insensitive' } } },
-        { customer: { lastName: { contains: search, mode: 'insensitive' } } },
-        { customer: { identityNo: { contains: search, mode: 'insensitive' } } },
-      ];
-    }
+    const { skip, take } = query;
+    const where = PolicyQueryHelper.buildWhereClause(query, user);
 
     const [items, total] = await Promise.all([
       this.prisma.policy.findMany({
@@ -118,49 +112,27 @@ export class PoliciesService {
         skip,
         take,
         orderBy: { createdAt: 'desc' },
-        include: {
-          customer: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              identityNo: true,
-            },
-          },
-          branch: { select: { id: true, name: true } },
-          broker: { select: { id: true, firstName: true, lastName: true } },
-          snapshot: { select: { id: true, totalAmount: true } },
-        },
+        include: PolicyQueryHelper.getFindAllIncludes(),
       }),
       this.prisma.policy.count({ where }),
     ]);
 
     const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+    const limit = query.limit ?? 20;
 
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string, user: AuthenticatedUser) {
     const policy = await this.prisma.policy.findUnique({
       where: { id },
-      include: {
-        customer: true,
-        branch: { include: { agency: { include: { company: true } } } },
-        broker: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-        assignment: {
-          include: {
-            claimedBy: {
-              select: { id: true, firstName: true, lastName: true },
-            },
-          },
-        },
-        snapshot: { include: { rule: true } },
-        previousPolicy: true,
-        renewals: true,
-      },
+      include: PolicyQueryHelper.getFindOneIncludes(),
     });
 
     if (!policy) throw new NotFoundException('Poliçe bulunamadı.');
@@ -179,31 +151,19 @@ export class PoliciesService {
       );
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.policyAssignment.upsert({
-        where: { policyId: id },
-        create: {
-          policyId: id,
-          claimedById: user.userId,
-          assignedAt: new Date(),
-        },
-        update: {
-          claimedById: user.userId,
-          assignedAt: new Date(),
-          releasedAt: null,
-          releaseReason: null,
-        },
-      });
+    const updated = await PolicyLifecycleHelper.claimPolicy(
+      this.prisma,
+      id,
+      user.userId,
+    );
 
-      return tx.policy.update({
-        where: { id },
-        data: { state: PolicyState.CLAIMED, brokerId: user.userId },
-        include: {
-          customer: true,
-          branch: true,
-          broker: { select: { id: true, firstName: true, lastName: true } },
-        },
-      });
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'CLAIM_POLICY',
+      entityType: 'POLICY',
+      entityId: id,
+      before: { state: policy.state, brokerId: policy.brokerId },
+      after: { state: PolicyState.CLAIMED, brokerId: user.userId },
     });
 
     this.policiesGateway.broadcastPolicyClaimed(id, user.userId);
@@ -227,20 +187,27 @@ export class PoliciesService {
       );
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.policyAssignment.updateMany({
-        where: { policyId: id },
-        data: {
-          releasedAt: new Date(),
-          releaseReason: dto.reason || 'Manuel havuz iadesi',
-        },
-      });
+    const updated = await PolicyLifecycleHelper.releasePolicy(
+      this.prisma,
+      id,
+      dto.reason,
+    );
 
-      return tx.policy.update({
-        where: { id },
-        data: { state: PolicyState.UNASSIGNED, brokerId: null },
-      });
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'RELEASE_POLICY',
+      entityType: 'POLICY',
+      entityId: id,
+      before: { state: policy.state, brokerId: policy.brokerId },
+      after: { state: PolicyState.UNASSIGNED, reason: dto.reason },
     });
+
+    await PolicyNotificationHelper.notifyOnPolicyReleased(
+      this.prisma,
+      this.notificationsService,
+      { product: updated.product, branchId: policy.branchId },
+      user.userId,
+    );
 
     this.policiesGateway.broadcastPolicyReleased(id);
     return updated;
@@ -257,46 +224,26 @@ export class PoliciesService {
       );
     }
 
-    const now = new Date();
-    const activeRule = await this.prisma.commissionRule.findFirst({
-      where: {
-        validFrom: { lte: now },
-        OR: [{ validUntil: null }, { validUntil: { gte: now } }],
-      },
-      orderBy: { validFrom: 'desc' },
-    });
-
-    if (!activeRule) {
-      throw new ConflictException(
-        'Poliçeyi tamamlamak için geçerli bir komisyon kuralı bulunamadı.',
-      );
-    }
-
-    const shares = CommissionCalculatorHelper.calculateShares(
+    const updated = await PolicyLifecycleHelper.completePolicy(
+      this.prisma,
+      id,
       dto.totalAmount,
-      activeRule,
     );
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.commissionSnapshot.create({
-        data: {
-          policyId: id,
-          commissionRuleId: activeRule.id,
-          totalAmount: shares.totalAmount,
-          brokerAmount: shares.brokerAmount,
-          branchAmount: shares.branchAmount,
-          agencyAmount: shares.agencyAmount,
-          companyAmount: shares.companyAmount,
-          calculatedAt: now,
-        },
-      });
-
-      return tx.policy.update({
-        where: { id },
-        data: { state: PolicyState.COMPLETED },
-        include: { snapshot: true, customer: true },
-      });
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'COMPLETE_POLICY',
+      entityType: 'POLICY',
+      entityId: id,
+      before: { state: policy.state },
+      after: { state: PolicyState.COMPLETED, totalAmount: dto.totalAmount },
     });
+
+    await PolicyNotificationHelper.notifyOnPolicyCompleted(
+      this.notificationsService,
+      { product: updated.product, brokerId: updated.brokerId },
+      dto.totalAmount,
+    );
 
     this.policiesGateway.broadcastPolicyCompleted(id);
     return updated;
@@ -310,10 +257,21 @@ export class PoliciesService {
       );
     }
 
-    return this.prisma.policy.update({
+    const updated = await this.prisma.policy.update({
       where: { id },
       data: { state: PolicyState.CANCELLED },
     });
+
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'CANCEL_POLICY',
+      entityType: 'POLICY',
+      entityId: id,
+      before: { state: policy.state },
+      after: { state: PolicyState.CANCELLED },
+    });
+
+    return updated;
   }
 
   async update(id: string, dto: UpdatePolicyDto, user: AuthenticatedUser) {
@@ -324,7 +282,7 @@ export class PoliciesService {
       );
     }
 
-    return this.prisma.policy.update({
+    const updated = await this.prisma.policy.update({
       where: { id },
       data: {
         ...(dto.product && { product: dto.product }),
@@ -332,6 +290,17 @@ export class PoliciesService {
         ...(dto.customerId && { customerId: dto.customerId }),
       },
     });
+
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'UPDATE_POLICY',
+      entityType: 'POLICY',
+      entityId: id,
+      before: { product: policy.product, state: policy.state },
+      after: { product: updated.product, state: updated.state },
+    });
+
+    return updated;
   }
 
   async remove(id: string, user: AuthenticatedUser) {
@@ -339,6 +308,15 @@ export class PoliciesService {
     if (policy.state === PolicyState.COMPLETED) {
       throw new ConflictException('Tamamlanmış poliçe kaydı silinemez.');
     }
+
+    await this.auditLogsService.logAction({
+      actorId: user.userId,
+      action: 'DELETE_POLICY',
+      entityType: 'POLICY',
+      entityId: id,
+      before: { product: policy.product, state: policy.state },
+      after: null,
+    });
 
     return this.prisma.policy.delete({ where: { id } });
   }
