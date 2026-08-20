@@ -42,6 +42,8 @@ export const queryKeys = {
   },
   notifications: {
     all: ['notifications'] as const,
+    lists: () => [...queryKeys.notifications.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.notifications.lists(), filters] as const,
     unread: () => [...queryKeys.notifications.all, 'unread'] as const,
   },
   companies: {
@@ -72,5 +74,10 @@ export const queryKeys = {
     details: () => [...queryKeys.customers.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.customers.details(), id] as const,
     lookup: (identityNo: string) => [...queryKeys.customers.all, 'lookup', identityNo] as const,
+  },
+  auditLogs: {
+    all: ['audit-logs'] as const,
+    lists: () => [...queryKeys.auditLogs.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.auditLogs.lists(), filters] as const,
   },
 } as const;

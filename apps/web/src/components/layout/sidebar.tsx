@@ -11,6 +11,7 @@ import {
   LifeBuoy,
   Building2,
   Users,
+  ShieldAlert,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -34,13 +35,19 @@ const navItems: NavItem[] = [
     title: 'Organizasyon',
     href: '/organizations',
     icon: Building2,
-    roles: ['SUPERADMIN', 'COMPANY_USER', 'AGENCY_MANAGER'],
+    roles: ['SUPERADMIN', 'COMPANY_USER', 'AGENCY_MANAGER', 'BRANCH_MANAGER'],
   },
   {
     title: 'Kullanıcılar',
     href: '/users',
     icon: Users,
     roles: ['SUPERADMIN', 'COMPANY_USER', 'AGENCY_MANAGER', 'BRANCH_MANAGER'],
+  },
+  {
+    title: 'Denetim İzi (Audit)',
+    href: '/audit-logs',
+    icon: ShieldAlert,
+    roles: ['SUPERADMIN', 'COMPANY_USER'],
   },
 ];
 
@@ -62,53 +69,56 @@ export function Sidebar({ user }: { user: AuthUser | null }) {
     <>
       {isSidebarOpen && (
         <div
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-xs lg:hidden"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden"
         />
       )}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border/60 bg-sidebar/95 backdrop-blur-md transition-transform duration-300 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border/60 bg-card transition-transform duration-300 lg:static lg:translate-x-0',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-border/40 px-5">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+        <div className="flex h-16 items-center justify-between border-b border-border/60 px-6">
+          <div className="flex items-center gap-2.5 font-bold tracking-tight text-foreground">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
               <Shield className="size-5" />
             </div>
-            <span className="font-heading text-lg font-bold tracking-tight">InsuraHub</span>
-          </Link>
+            <span className="text-lg">InsuraHub</span>
+          </div>
+
           <button
             onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted lg:hidden"
+            className="text-muted-foreground hover:text-foreground lg:hidden"
+            aria-label="Menüyü kapat"
           >
             <X className="size-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Menü
-          </div>
           <nav className="space-y-1">
             {filteredNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isActive =
+                item.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname.startsWith(item.href);
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary/10 text-primary font-semibold'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
-                  <Icon className={cn('size-4', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                  <Icon className={cn('size-4 shrink-0', isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
                   <span>{item.title}</span>
                 </Link>
               );
@@ -116,15 +126,16 @@ export function Sidebar({ user }: { user: AuthUser | null }) {
           </nav>
         </div>
 
-        <div className="border-t border-border/40 p-4">
-          <div className="rounded-lg bg-muted/40 p-3 border border-border/30">
-            <div className="text-[11px] font-medium uppercase text-muted-foreground">Kapsam</div>
-            <div className="mt-0.5 truncate text-xs font-semibold text-foreground">
+        <div className="border-t border-border/60 p-4">
+          <div className="rounded-xl border border-border/50 bg-muted/40 p-3">
+            <div className="text-xs font-semibold text-foreground truncate">
               {organizationLabel}
             </div>
-            <Badge variant="secondary" className="mt-2 text-[10px] uppercase tracking-wide">
-              {user?.role.replace('_', ' ')}
-            </Badge>
+            <div className="mt-1 flex items-center gap-1.5">
+              <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
+                {user?.role.replace('_', ' ')}
+              </Badge>
+            </div>
           </div>
         </div>
       </aside>

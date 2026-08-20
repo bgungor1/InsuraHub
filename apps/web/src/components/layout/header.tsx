@@ -2,11 +2,13 @@
 
 import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Menu, LogOut, Bell, User } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Menu, LogOut, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import { Button } from '@/components/ui/button';
 import { AuthUser } from '@/types/auth.types';
+import { NotificationBell } from '@/features/notifications';
 
 const routeTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -15,11 +17,13 @@ const routeTitles: Record<string, string> = {
   '/tickets': 'Destek Talepleri',
   '/organizations': 'Organizasyon Yönetimi',
   '/users': 'Kullanıcılar',
+  '/audit-logs': 'Denetim İzi (Audit Logs)',
 };
 
 export function Header({ user }: { user: AuthUser | null }) {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const { toggleSidebar } = useUiStore();
   const logout = useAuthStore((state) => state.logout);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
@@ -30,7 +34,9 @@ export function Header({ user }: { user: AuthUser | null }) {
     try {
       setIsLoggingOut(true);
       await logout();
+      queryClient.clear();
       router.push('/login');
+      router.refresh();
     } finally {
       setIsLoggingOut(false);
     }
@@ -58,10 +64,7 @@ export function Header({ user }: { user: AuthUser | null }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon-sm" className="relative text-muted-foreground" aria-label="Bildirimler">
-          <Bell className="size-4" />
-          <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-        </Button>
+        <NotificationBell />
 
         <div className="h-5 w-px bg-border/60" />
 
