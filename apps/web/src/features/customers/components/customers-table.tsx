@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import type { ColDef } from 'ag-grid-community';
+import { ColDef, ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 import type { Customer } from '../types/customer.types';
 import { useCustomersQuery } from '../hooks/use-customers-query';
 

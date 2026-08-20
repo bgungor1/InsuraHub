@@ -1,14 +1,13 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../../auth/decorators';
 import { CreateCommissionRuleDto, QueryCommissionDto } from './dto';
 import { CommissionCalculatorHelper } from './helpers/commission-calculator.helper';
+import { CommissionScopeHelper } from './helpers/commission-scope.helper';
 
 @Injectable()
 export class CommissionsService {
@@ -28,7 +27,13 @@ export class CommissionsService {
 
     return this.prisma.$transaction(async (tx) => {
       await tx.commissionRule.updateMany({
-        where: { validUntil: null },
+        where: {
+          OR: [
+            { validUntil: null },
+            { validUntil: { isSet: false } },
+            { validUntil: { gt: now } },
+          ],
+        },
         data: { validUntil: now },
       });
 
@@ -51,7 +56,11 @@ export class CommissionsService {
     return this.prisma.commissionRule.findMany({
       where: {
         validFrom: { lte: now },
-        OR: [{ validUntil: null }, { validUntil: { gte: now } }],
+        OR: [
+          { validUntil: null },
+          { validUntil: { isSet: false } },
+          { validUntil: { gte: now } },
+        ],
       },
       orderBy: { validFrom: 'desc' },
     });
@@ -77,7 +86,11 @@ export class CommissionsService {
     const activeRule = await this.prisma.commissionRule.findFirst({
       where: {
         validFrom: { lte: now },
-        OR: [{ validUntil: null }, { validUntil: { gte: now } }],
+        OR: [
+          { validUntil: null },
+          { validUntil: { isSet: false } },
+          { validUntil: { gte: now } },
+        ],
       },
       orderBy: { validFrom: 'desc' },
     });
@@ -135,25 +148,12 @@ export class CommissionsService {
   }
 
   async findAllSnapshots(query: QueryCommissionDto, user: AuthenticatedUser) {
-    const { skip, take, ruleId, startDate, endDate } = query;
-    const where: Prisma.CommissionSnapshotWhereInput = {};
-
-    if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
-      where.policy = { branch: { agencyId: user.agencyId } };
-    } else if (user.role === UserRole.BRANCH_MANAGER && user.branchId) {
-      where.policy = { branchId: user.branchId };
-    } else if (user.role === UserRole.BROKER) {
-      where.policy = { brokerId: user.userId };
-    }
-
-    if (ruleId) where.commissionRuleId = ruleId;
-
-    if (startDate || endDate) {
-      where.calculatedAt = {
-        ...(startDate && { gte: new Date(startDate) }),
-        ...(endDate && { lte: new Date(endDate) }),
-      };
-    }
+    const { skip, take } = query;
+    const where = await CommissionScopeHelper.buildSnapshotWhere(
+      this.prisma,
+      query,
+      user,
+    );
 
     const [items, total] = await Promise.all([
       this.prisma.commissionSnapshot.findMany({
@@ -204,26 +204,7 @@ export class CommissionsService {
       );
     }
 
-    if (user.role === UserRole.AGENCY_MANAGER && user.agencyId) {
-      if (snapshot.policy.branch.agencyId !== user.agencyId) {
-        throw new ConflictException(
-          'Bu komisyon dekontunu görüntüleme yetkiniz yok.',
-        );
-      }
-    } else if (user.role === UserRole.BRANCH_MANAGER && user.branchId) {
-      if (snapshot.policy.branchId !== user.branchId) {
-        throw new ConflictException(
-          'Bu komisyon dekontunu görüntüleme yetkiniz yok.',
-        );
-      }
-    } else if (
-      user.role === UserRole.BROKER &&
-      snapshot.policy.brokerId !== user.userId
-    ) {
-      throw new ConflictException(
-        'Bu komisyon dekontunu görüntüleme yetkiniz yok.',
-      );
-    }
+    CommissionScopeHelper.verifySnapshotAccess(snapshot, user);
 
     return snapshot;
   }
