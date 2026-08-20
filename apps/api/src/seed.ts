@@ -40,6 +40,53 @@ async function bootstrap() {
     console.log(`ℹ️ Test Şirketi zaten mevcut: ${testCompany.name}`);
   }
 
+  // Audit Logs seed
+  const existingLogs = await prisma.auditLog.count();
+  if (existingLogs === 0) {
+    await prisma.auditLog.createMany({
+      data: [
+        {
+          actorId: superAdmin.id,
+          action: 'SYSTEM_INITIALIZE',
+          entityType: 'SYSTEM',
+          entityId: superAdmin.id,
+          before: null,
+          after: {
+            message:
+              'Sistem ilk kurulumu ve başlangıç yapılandırması tamamlandı.',
+          },
+        },
+        {
+          actorId: superAdmin.id,
+          action: 'CREATE_COMPANY',
+          entityType: 'COMPANY',
+          entityId: testCompany.id,
+          before: null,
+          after: { name: testCompany.name, taxNumber: testCompany.taxNumber },
+        },
+        {
+          actorId: superAdmin.id,
+          action: 'UPDATE_COMMISSION_RULE',
+          entityType: 'COMMISSION_RULE',
+          entityId: superAdmin.id,
+          before: {
+            companyShare: 35,
+            agencyShare: 35,
+            branchShare: 15,
+            brokerShare: 15,
+          },
+          after: {
+            companyShare: 40,
+            agencyShare: 30,
+            branchShare: 15,
+            brokerShare: 15,
+          },
+        },
+      ],
+    });
+    console.log('✅ Örnek denetim kayıtları (Audit Logs) oluşturuldu.');
+  }
+
   await app.close();
   console.log('🎉 Seeding başarıyla tamamlandı!');
 }

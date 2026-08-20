@@ -2,12 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { UserRole } from '@prisma/client';
 import type { Request } from 'express';
 
 export interface JwtPayload {
   sub: string;
   email: string;
-  role: string;
+  role: UserRole;
   branchId?: string;
   agencyId?: string;
   companyId?: string;
@@ -16,7 +17,7 @@ export interface JwtPayload {
 export interface AuthenticatedUser {
   userId: string;
   email: string;
-  role: string;
+  role: UserRole;
   branchId?: string;
   agencyId?: string;
   companyId?: string;
@@ -41,7 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     if (!payload) {
       throw new UnauthorizedException('Geçersiz token');
     }

@@ -4,7 +4,7 @@ import { UpdateFinanceDto } from './dto/update-finance.dto';
 
 @Injectable()
 export class FinanceService {
-  create(createFinanceDto: CreateFinanceDto) {
+  create(_createFinanceDto: CreateFinanceDto) {
     return 'This action adds a new finance';
   }
 
@@ -16,7 +16,7 @@ export class FinanceService {
     return `This action returns a #${id} finance`;
   }
 
-  update(id: number, updateFinanceDto: UpdateFinanceDto) {
+  update(id: number, _updateFinanceDto: UpdateFinanceDto) {
     return `This action updates a #${id} finance`;
   }
 

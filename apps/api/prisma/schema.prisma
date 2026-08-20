@@ -96,6 +96,7 @@ model User {
   firstName String
   lastName  String
   role      UserRole
+  isActive  Boolean  @default(true)
 
   branchId  String?  @db.ObjectId
   branch    Branch?  @relation(fields: [branchId], references: [id])
@@ -133,6 +134,13 @@ model Policy {
   id      String      @id @default(auto()) @map("_id") @db.ObjectId
   product String
   state   PolicyState @default(DRAFT)
+
+  // Policy Details & Financials
+  totalAmount    Float?
+  coverageAmount Float?
+  plateNumber    String?
+  uavtCode       String?
+  paymentTerm    String?
 
   customerId String   @db.ObjectId
   customer   Customer @relation(fields: [customerId], references: [id])
