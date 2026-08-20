@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsMongoId,
@@ -33,6 +34,10 @@ export class CreateUserDto {
 
   @IsEnum(UserRole, { message: 'Geçerli bir kullanıcı rolü seçiniz.' })
   role: UserRole;
+
+  @IsOptional()
+  @IsBoolean({ message: 'Aktiflik durumu boolean olmalıdır.' })
+  isActive?: boolean;
 
   @IsOptional()
   @IsMongoId({ message: 'Geçerli bir şirket kimliği (ObjectId) giriniz.' })

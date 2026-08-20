@@ -17,6 +17,7 @@ const userSelectFields = {
   firstName: true,
   lastName: true,
   role: true,
+  isActive: true,
   companyId: true,
   agencyId: true,
   branchId: true,
@@ -49,28 +50,55 @@ export class UsersService {
   }
 
   async findAll(query: QueryUserDto, currentUser: AuthenticatedUser) {
-    const where: Prisma.UserWhereInput = {};
-    if (currentUser.role === UserRole.COMPANY_USER && currentUser.companyId)
-      where.companyId = currentUser.companyId;
-    if (currentUser.role === UserRole.AGENCY_MANAGER && currentUser.agencyId)
-      where.agencyId = currentUser.agencyId;
-    if (currentUser.role === UserRole.BRANCH_MANAGER && currentUser.branchId)
-      where.branchId = currentUser.branchId;
+    const andConditions: Prisma.UserWhereInput[] = [];
 
-    if (query.role) where.role = query.role;
+    if (currentUser.role === UserRole.COMPANY_USER && currentUser.companyId) {
+      andConditions.push({
+        OR: [
+          { companyId: currentUser.companyId },
+          { agency: { companyId: currentUser.companyId } },
+          { branch: { agency: { companyId: currentUser.companyId } } },
+        ],
+      });
+    } else if (
+      currentUser.role === UserRole.AGENCY_MANAGER &&
+      currentUser.agencyId
+    ) {
+      andConditions.push({
+        OR: [
+          { agencyId: currentUser.agencyId },
+          { branch: { agencyId: currentUser.agencyId } },
+        ],
+      });
+    } else if (
+      (currentUser.role === UserRole.BRANCH_MANAGER ||
+        currentUser.role === UserRole.BROKER) &&
+      currentUser.branchId
+    ) {
+      andConditions.push({ branchId: currentUser.branchId });
+    }
+
+    if (query.role) andConditions.push({ role: query.role });
+    if (typeof query.isActive === 'boolean')
+      andConditions.push({ isActive: query.isActive });
     if (query.companyId && currentUser.role === UserRole.SUPERADMIN)
-      where.companyId = query.companyId;
-    if (query.agencyId) where.agencyId = query.agencyId;
-    if (query.branchId) where.branchId = query.branchId;
+      andConditions.push({ companyId: query.companyId });
+    if (query.agencyId) andConditions.push({ agencyId: query.agencyId });
+    if (query.branchId) andConditions.push({ branchId: query.branchId });
 
     if (query.search?.trim()) {
       const s = query.search.trim();
-      where.OR = [
-        { firstName: { contains: s, mode: 'insensitive' } },
-        { lastName: { contains: s, mode: 'insensitive' } },
-        { email: { contains: s, mode: 'insensitive' } },
-      ];
+      andConditions.push({
+        OR: [
+          { firstName: { contains: s, mode: 'insensitive' } },
+          { lastName: { contains: s, mode: 'insensitive' } },
+          { email: { contains: s, mode: 'insensitive' } },
+        ],
+      });
     }
+
+    const where: Prisma.UserWhereInput =
+      andConditions.length > 0 ? { AND: andConditions } : {};
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
@@ -134,7 +162,7 @@ export class UsersService {
   }
 
   private async resolveHierarchyIds(dto: CreateUserDto) {
-    if (dto.branchId && (!dto.agencyId || !dto.companyId)) {
+    if (dto.branchId) {
       const branch = await this.prisma.branch.findUnique({
         where: { id: dto.branchId },
         include: { agency: true },
@@ -142,6 +170,11 @@ export class UsersService {
       if (!branch) throw new BadRequestException('Geçersiz şube seçimi.');
       dto.agencyId = branch.agencyId;
       dto.companyId = branch.agency.companyId;
+    } else if (dto.agencyId && !dto.companyId) {
+      const agency = await this.prisma.agency.findUnique({
+        where: { id: dto.agencyId },
+      });
+      if (agency) dto.companyId = agency.companyId;
     }
   }
 
@@ -150,15 +183,30 @@ export class UsersService {
       companyId?: string | null;
       agencyId?: string | null;
       branchId?: string | null;
+      company?: { id?: string } | null;
+      agency?: { id?: string } | null;
+      branch?: { id?: string } | null;
     },
     u: AuthenticatedUser,
   ) {
     if (u.role === UserRole.SUPERADMIN) return;
-    if (u.role === UserRole.COMPANY_USER && t.companyId !== u.companyId)
+    if (
+      u.role === UserRole.COMPANY_USER &&
+      t.companyId &&
+      t.companyId !== u.companyId
+    )
       throw new ForbiddenException();
-    if (u.role === UserRole.AGENCY_MANAGER && t.agencyId !== u.agencyId)
+    if (
+      u.role === UserRole.AGENCY_MANAGER &&
+      t.agencyId &&
+      t.agencyId !== u.agencyId
+    )
       throw new ForbiddenException();
-    if (u.role === UserRole.BRANCH_MANAGER && t.branchId !== u.branchId)
+    if (
+      u.role === UserRole.BRANCH_MANAGER &&
+      t.branchId &&
+      t.branchId !== u.branchId
+    )
       throw new ForbiddenException();
   }
 }
