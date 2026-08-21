@@ -7,10 +7,18 @@ export const policiesSocket = io(`${API_ORIGIN}/policies`, {
   autoConnect: false,
   withCredentials: true,
   transports: ['websocket', 'polling'],
+  auth: (cb) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : undefined;
+    cb({ token });
+  },
 });
 
 export const notificationsSocket = io(`${API_ORIGIN}/notifications`, {
   autoConnect: false,
   withCredentials: true,
   transports: ['websocket', 'polling'],
+  auth: (cb) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : undefined;
+    cb({ token });
+  },
 });

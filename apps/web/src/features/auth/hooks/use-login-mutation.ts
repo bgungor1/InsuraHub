@@ -11,6 +11,11 @@ export function useLoginMutation() {
   return useMutation<LoginResponse, Error, LoginRequest>({
     mutationFn: (credentials: LoginRequest) => authService.login(credentials),
     onSuccess: (data) => {
+      if (data.accessToken && typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', data.accessToken);
+        const isSecure = window.location.protocol === 'https:';
+        document.cookie = `Authentication=${data.accessToken}; path=/; max-age=28800; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+      }
       if (data.user) {
         queryClient.clear();
         queryClient.setQueryData(queryKeys.auth.me(), data.user);
