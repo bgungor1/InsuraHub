@@ -10,7 +10,10 @@ import {
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: {
+    origin: true,
+    credentials: true,
+  },
   namespace: '/notifications',
 })
 export class NotificationsGateway

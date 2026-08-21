@@ -27,11 +27,12 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.authService.login(loginDto);
+    const isProduction = process.env.NODE_ENV === 'production';
 
     response.cookie('Authentication', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 8 * 60 * 60 * 1000,
       path: '/',
     });
@@ -42,7 +43,13 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('Authentication', { path: '/' });
+    const isProduction = process.env.NODE_ENV === 'production';
+    response.clearCookie('Authentication', {
+      path: '/',
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+    });
     return { message: 'Başarıyla çıkış yapıldı' };
   }
 
