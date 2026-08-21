@@ -3,7 +3,6 @@ import { ApiErrorResponse } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   withCredentials: true,
@@ -16,6 +15,12 @@ export const apiClient: AxiosInstance = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error: AxiosError) => {
@@ -32,9 +37,14 @@ apiClient.interceptors.response.use(
       const { status, data } = error.response;
 
       if (status === 401 && typeof window !== 'undefined') {
-        const isAuthPage = window.location.pathname.startsWith('/login') || window.location.pathname.startsWith('/auth');
+        const isAuthPage =
+          window.location.pathname.startsWith('/login') ||
+          window.location.pathname.startsWith('/auth');
         if (!isAuthPage) {
           console.warn('[API] Session expired or unauthorized. Redirecting to login...');
+          localStorage.removeItem('auth_token');
+          document.cookie =
+            'Authentication=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
           // eslint-disable-next-line @next/next/no-location-assign-relative-destination
           window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         }
