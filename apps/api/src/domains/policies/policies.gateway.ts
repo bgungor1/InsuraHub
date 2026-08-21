@@ -10,7 +10,8 @@ import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: true,
+    credentials: true,
   },
   namespace: '/policies',
 })

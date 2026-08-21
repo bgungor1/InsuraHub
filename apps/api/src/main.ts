@@ -10,11 +10,38 @@ async function bootstrap() {
   app.enableShutdownHooks();
   app.use(cookieParser());
 
+  const explicitOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map((u) =>
+        u.trim().replace(/\/$/, ''),
+      )
+    : ['http://localhost:3000'];
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      const isAllowed =
+        explicitOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('https://localhost:');
+
+      if (isAllowed) {
+        callback(null, origin);
+      } else {
+        callback(new Error(`CORS origin '${origin}' is not allowed`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Cookie',
+      'X-Requested-With',
+    ],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   app.useGlobalPipes(
