@@ -48,12 +48,6 @@ function LoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
-  const handleSelectDemoAccount = (email: string, pass: string) => {
-    form.setValue('email', email, { shouldValidate: true });
-    form.setValue('password', pass, { shouldValidate: true });
-    setErrorMessage(null);
-  };
-
   const onSubmit = async (values: LoginFormValues) => {
     try {
       setErrorMessage(null);
@@ -69,7 +63,7 @@ function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-lg border-border/60 shadow-xl backdrop-blur-sm">
+    <Card className="w-full max-w-md border-border/60 shadow-xl backdrop-blur-sm">
       <CardHeader className="space-y-2 text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Shield className="size-6" />
@@ -165,10 +159,7 @@ function LoginForm() {
           </form>
         </Form>
 
-        <DemoCredentialsCard
-          onSelect={handleSelectDemoAccount}
-          disabled={loginMutation.isPending}
-        />
+        <DemoCredentialsCard />
       </CardContent>
     </Card>
   );
