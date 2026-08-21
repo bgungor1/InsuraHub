@@ -7,11 +7,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Shield, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
-import { useLoginMutation } from '@/features/auth';
+import { useLoginMutation, DemoCredentialsCard } from '@/features/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
 const loginSchema = z.object({
   email: z.string().email('Geçerli bir kurumsal e-posta adresi giriniz.'),
@@ -35,24 +48,35 @@ function LoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
+  const handleSelectDemoAccount = (email: string, pass: string) => {
+    form.setValue('email', email, { shouldValidate: true });
+    form.setValue('password', pass, { shouldValidate: true });
+    setErrorMessage(null);
+  };
+
   const onSubmit = async (values: LoginFormValues) => {
     try {
       setErrorMessage(null);
       await loginMutation.mutateAsync(values);
       router.push(redirectPath);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Giriş yapılamadı. Bilgilerinizi kontrol edin.';
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Giriş yapılamadı. Bilgilerinizi kontrol edin.';
       setErrorMessage(message);
     }
   };
 
   return (
-    <Card className="w-full max-w-md border-border/60 shadow-xl backdrop-blur-sm">
+    <Card className="w-full max-w-lg border-border/60 shadow-xl backdrop-blur-sm">
       <CardHeader className="space-y-2 text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Shield className="size-6" />
         </div>
-        <CardTitle className="text-2xl font-bold tracking-tight">InsuraHub</CardTitle>
+        <CardTitle className="text-2xl font-bold tracking-tight">
+          InsuraHub
+        </CardTitle>
         <CardDescription>
           Kurumsal sigorta ve acente yönetim sistemine giriş yapın
         </CardDescription>
@@ -103,7 +127,11 @@ function LoginForm() {
                         tabIndex={-1}
                         aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
                       >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        {showPassword ? (
+                          <EyeOff className="size-4" />
+                        ) : (
+                          <Eye className="size-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -121,7 +149,7 @@ function LoginForm() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full font-semibold"
               size="lg"
               disabled={loginMutation.isPending}
             >
@@ -136,6 +164,11 @@ function LoginForm() {
             </Button>
           </form>
         </Form>
+
+        <DemoCredentialsCard
+          onSelect={handleSelectDemoAccount}
+          disabled={loginMutation.isPending}
+        />
       </CardContent>
     </Card>
   );
@@ -144,7 +177,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-radial-[at_top_center] from-muted/50 to-background p-4">
-      <React.Suspense fallback={<Loader2 className="size-8 animate-spin text-primary" />}>
+      <React.Suspense
+        fallback={<Loader2 className="size-8 animate-spin text-primary" />}
+      >
         <LoginForm />
       </React.Suspense>
     </div>
