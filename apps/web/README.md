@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌐 InsuraHub Web (Frontend)
 
-## Getting Started
+InsuraHub kurumsal sigorta ve acente yönetim sisteminin **Next.js 16 (App Router)** tabanlı kullanıcı arayüzü uygulamasıdır.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🛠️ Teknoloji Yığını
+
+- **Framework:** Next.js 16.3.0 (React 19.2.8)
+- **Stil:** Tailwind CSS v4, PostCSS, Shadcn UI, Radix UI
+- **Veri Tabloları:** AG Grid (`ag-grid-react` v36.1)
+- **Grafikler:** amCharts 5 (`@amcharts/amcharts5` v5.20)
+- **State Yönetimi:** TanStack React Query v5 (Server State) & Zustand v5 (Client State)
+- **Form & Doğrulama:** React Hook Form & Zod
+- **Gerçek Zamanlı:** Socket.io Client v4.8
+- **Test:** Vitest (Unit) & Playwright (E2E)
+
+---
+
+## 📂 Dizin Yapısı
+
+```text
+apps/web/
+├── src/
+│   ├── app/                      # Next.js App Router sayfaları
+│   │   ├── (auth)/login/         # Giriş sayfası & Demo hesap listesi
+│   │   └── (dashboard)/          # Dashboard ve alt modül sayfaları
+│   │       ├── audit-logs/       # Denetim günlükleri
+│   │       ├── commissions/      # Komisyon takibi & kuralları
+│   │       ├── customers/        # Müşteri portföyü
+│   │       ├── dashboard/        # KPI özetleri & grafikler
+│   │       ├── organizations/    # Şirket, Acente ve Şube yönetimi
+│   │       ├── policies/         # Poliçe oluşturma & yönetim tablosu
+│   │       ├── tickets/          # Destek masası & mesajlaşma
+│   │       └── users/            # Kullanıcı yönetimi
+│   ├── components/               # Ortak UI & Layout bileşenleri
+│   ├── features/                 # Domain bazlı özellik modülleri (hooks, services, types)
+│   ├── hooks/                    # Genel yardımcı React hook'ları
+│   ├── lib/                      # Axios API istemcisi & WebSocket bağlantıları
+│   ├── middleware.ts             # Oturum & rota güvenlik katmanı
+│   ├── stores/                   # Zustand state mağazaları
+│   └── types/                    # Tip tanımları
+├── tests/                        # E2E testleri (Playwright)
+└── Dockerfile                    # Container derleme dosyası
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Geliştirme ve Test Komutları
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Bağımlılıkları yükleyin (Kök dizinden)
+pnpm install
 
-## Learn More
+# Geliştirme sunucusunu başlatın (Port: 3000)
+pnpm --filter web dev
 
-To learn more about Next.js, take a look at the following resources:
+# Projeyi derleyin
+pnpm --filter web build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Birim testlerini çalıştırın (Vitest)
+pnpm --filter web test
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# E2E testlerini çalıştırın (Playwright)
+pnpm --filter web exec playwright test
+```
